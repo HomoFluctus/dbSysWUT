@@ -55,6 +55,7 @@ export const api = {
 
   // Recurring
   getRecurring: (scheduleId) => request(`/schedules/${scheduleId}/recurring`),
+  getRecurringDates: (scheduleId, limit = 20) => request(`/schedules/${scheduleId}/recurring/dates?limit=${limit}`),
   upsertRecurring: (scheduleId, body) => request(`/schedules/${scheduleId}/recurring`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteRecurring: (scheduleId) => request(`/schedules/${scheduleId}/recurring`, { method: 'DELETE' }),
 

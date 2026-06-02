@@ -84,6 +84,12 @@
           {{ schedule.recurring.freq === 'daily' ? '每天' : schedule.recurring.freq === 'weekly' ? '每周' : schedule.recurring.freq === 'monthly' ? '每月' : '每年' }}
           ，间隔 {{ schedule.recurring.interval }} 次
         </el-tag>
+        <div v-if="recurringDates.length > 0" style="margin-top: 12px;">
+          <span style="font-size: 12px; color: var(--text-muted);">未来 {{ recurringDates.length }} 次：</span>
+          <div class="recurring-date-list">
+            <el-tag v-for="d in recurringDates" :key="d" size="small" effect="plain" round>{{ d }}</el-tag>
+          </div>
+        </div>
       </div>
 
       <div v-if="schedule.reminders?.length" class="section">
@@ -203,6 +209,7 @@ const loading = ref(true)
 
 const deps = ref([])
 const subtasks = ref([])
+const recurringDates = ref([])
 const newSubtaskTitle = ref('')
 const subtaskLoading = ref(false)
 const showDepDialog = ref(false)
@@ -221,6 +228,7 @@ onMounted(async () => {
     schedule.value = await store.fetchSchedule(route.params.id)
     await loadDeps()
     await loadSubtasks()
+    await loadRecurringDates()
   } finally {
     loading.value = false
   }
@@ -236,6 +244,14 @@ async function loadSubtasks() {
   try {
     subtasks.value = await api.listSubtasks(route.params.id)
   } catch { subtasks.value = [] }
+}
+
+async function loadRecurringDates() {
+  if (!schedule.value?.recurring) return
+  try {
+    const data = await api.getRecurringDates(route.params.id)
+    recurringDates.value = data.dates || []
+  } catch { recurringDates.value = [] }
 }
 
 async function addSubtask() {
@@ -415,4 +431,5 @@ async function exportJSON() {
 }
 .subtask-title { flex: 1; color: var(--text-secondary); }
 .subtask-summary { font-size: 12px; color: var(--text-muted); }
+.recurring-date-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 </style>

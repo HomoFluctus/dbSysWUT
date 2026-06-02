@@ -132,6 +132,38 @@ async def get_recurring_rule(
     return await get_recurring(db, schedule_id, user.user_id)
 
 
+@router.get("/{schedule_id}/recurring/dates")
+async def get_recurring_dates(
+    schedule_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the next N occurrence dates for a recurring schedule."""
+    from app.services.recurring_service import expand_recurring_dates
+    from datetime import date as date_type
+
+    rule = await get_recurring(db, schedule_id, user.user_id)
+    if not rule:
+        return {"dates": [], "rule": None}
+
+    today = date_type.today()
+    end = today + __import__('datetime').timedelta(days=365)
+    dates = expand_recurring_dates(rule, today, end)
+    return {
+        "rule": {
+            "freq": rule.freq,
+            "interval": rule.interval,
+            "weekdays": rule.weekdays,
+            "monthday": rule.monthday,
+            "start_date": str(rule.start_date),
+            "end_date": str(rule.end_date) if rule.end_date else None,
+        },
+        "dates": [str(d) for d in dates[:limit]],
+        "total": len(dates),
+    }
+
+
 @router.put("/{schedule_id}/recurring", response_model=RecurringRuleOut)
 async def upsert_recurring_rule(
     schedule_id: int,

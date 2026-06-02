@@ -104,6 +104,17 @@
           </el-form-item>
         </el-col>
       </el-row>
+      <el-form-item v-if="enableRecurring && recurring.freq === 'weekly'" label="重复星期">
+        <el-checkbox-group v-model="recurringWeekdays">
+          <el-checkbox :label="0">周一</el-checkbox>
+          <el-checkbox :label="1">周二</el-checkbox>
+          <el-checkbox :label="2">周三</el-checkbox>
+          <el-checkbox :label="3">周四</el-checkbox>
+          <el-checkbox :label="4">周五</el-checkbox>
+          <el-checkbox :label="5">周六</el-checkbox>
+          <el-checkbox :label="6">周日</el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
 
       <!-- Reminders -->
       <el-divider />
@@ -160,6 +171,7 @@ const form = ref({
 
 const enableRecurring = ref(false)
 const recurring = ref({ freq: 'daily', interval: 1, start_date: '', end_date: '' })
+const recurringWeekdays = ref([])
 const reminders = ref([])
 
 function addReminder(minutes) {
@@ -193,6 +205,9 @@ onMounted(async () => {
           freq: s.recurring.freq, interval: s.recurring.interval,
           start_date: s.recurring.start_date, end_date: s.recurring.end_date || '',
         }
+        if (s.recurring.weekdays) {
+          recurringWeekdays.value = s.recurring.weekdays.split(',').map(Number)
+        }
       }
       if (s.reminders?.length) {
         reminders.value = s.reminders.map(r => ({
@@ -216,15 +231,23 @@ async function handleSubmit() {
     let schedule
     if (isEdit.value) {
       schedule = await store.updateSchedule(route.params.id, data)
+      const recurringPayload = { ...recurring.value, end_date: recurring.value.end_date || null }
+      if (recurring.value.freq === 'weekly' && recurringWeekdays.value.length > 0) {
+        recurringPayload.weekdays = recurringWeekdays.value.sort().join(',')
+      }
       if (enableRecurring.value) {
-        await api.upsertRecurring(schedule.schedule_id, { ...recurring.value, end_date: recurring.value.end_date || null })
+        await api.upsertRecurring(schedule.schedule_id, recurringPayload)
       } else {
         await api.deleteRecurring(schedule.schedule_id).catch(() => {})
       }
     } else {
       schedule = await store.createSchedule(data)
+      const recurringPayload = { ...recurring.value, end_date: recurring.value.end_date || null }
+      if (recurring.value.freq === 'weekly' && recurringWeekdays.value.length > 0) {
+        recurringPayload.weekdays = recurringWeekdays.value.sort().join(',')
+      }
       if (enableRecurring.value) {
-        await api.upsertRecurring(schedule.schedule_id, { ...recurring.value, end_date: recurring.value.end_date || null })
+        await api.upsertRecurring(schedule.schedule_id, recurringPayload)
       }
       for (const r of reminders.value) {
         if (r.remind_at) {
