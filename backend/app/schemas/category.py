@@ -19,6 +19,7 @@ class CategoryOut(BaseModel):
     name: str
     color: str
     is_default: bool
+    schedule_count: int = 0
 
     class Config:
         from_attributes = True

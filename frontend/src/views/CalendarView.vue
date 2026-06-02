@@ -153,24 +153,25 @@ onMounted(loadMonth)
   cursor: pointer;
   transition: background var(--transition-fast);
 }
-.cal-cell:hover { background: #1e293b; }
+.cal-cell:hover { background: var(--el-fill-color); }
 .cal-cell.other-month { opacity: 0.4; }
-.cal-cell.today { box-shadow: inset 0 2px 0 #818cf8; background: rgba(99,102,241,0.05); }
+.cal-cell.today { box-shadow: inset 0 2px 0 #818cf8; background: var(--el-color-primary-light-9); }
+html.dark .cal-cell.today { background: rgba(99,102,241,0.05); }
 .cell-date { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px; }
 .cell-event {
   font-size: 11px;
   padding: 2px 6px;
   margin-bottom: 2px;
   border-radius: 3px;
-  background: #0f172a;
+  background: var(--el-fill-color-light);
   border-left: 3px solid;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
 }
-.cell-more { font-size: 11px; color: #818cf8; padding: 2px 6px; cursor: pointer; }
+.cell-more { font-size: 11px; color: var(--el-color-primary); padding: 2px 6px; cursor: pointer; }
 
 .day-list { display: flex; flex-direction: column; gap: 8px; }
 .day-item {

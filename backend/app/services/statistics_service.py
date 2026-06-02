@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import TZ
 
@@ -114,6 +115,29 @@ async def get_activity_heatmap(db: AsyncSession, user_id: int) -> dict:
     result = await db.execute(stmt_due)
     for row in result:
         merged[str(row.day)] = merged.get(str(row.day), 0) + row.cnt
+
+    # Count recurring occurrences: expand each recurring schedule's dates in range
+    from sqlalchemy.orm import selectinload
+    from app.models.recurring_rule import RecurringRule
+    from app.services.recurring_service import expand_recurring_dates
+
+    stmt_recur = (
+        select(Schedule)
+        .where(Schedule.user_id == user_id)
+        .where(Schedule.recurring.has(RecurringRule.start_date.isnot(None)))
+        .options(selectinload(Schedule.recurring))
+    )
+    result = await db.execute(stmt_recur)
+    recurring_schedules = result.unique().scalars().all()
+
+    range_start = since.date()
+    range_end = datetime.now(TZ).date()
+    for s in recurring_schedules:
+        if s.recurring:
+            dates = expand_recurring_dates(s.recurring, range_start, range_end)
+            for d in dates:
+                key = d.isoformat()
+                merged[key] = merged.get(key, 0) + 1
 
     return merged
 

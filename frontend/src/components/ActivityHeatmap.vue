@@ -74,7 +74,7 @@ function buildCells(data) {
   const start = new Date(now.getFullYear(), now.getMonth() - 11, 1)
   const d = new Date(start)
   while (d <= now) {
-    const key = d.toISOString().slice(0, 10)
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
     const count = data[key] || 0
     total += count
     result.push({

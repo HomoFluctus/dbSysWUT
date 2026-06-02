@@ -98,7 +98,10 @@ def expand_recurring_dates(rule: RecurringRule, range_start: date, range_end: da
 
     elif rule.freq == "weekly":
         if rule.weekdays:
-            target_days = {int(d) for d in rule.weekdays.split(",") if d.strip()}
+            raw = rule.weekdays.strip()
+            if raw.startswith("[") and raw.endswith("]"):
+                raw = raw[1:-1]
+            target_days = {int(d.strip()) for d in raw.split(",") if d.strip()}
         else:
             target_days = {start.weekday()}
 

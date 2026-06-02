@@ -1,9 +1,17 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
+from app.config import TZ
 from app.models.schedule import PriorityLevel, ScheduleStatus
+
+
+def _ensure_beijing_tz(dt: datetime | None) -> datetime | None:
+    """If datetime is naive, assume it represents Beijing time (UTC+8)."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=TZ)
+    return dt
 
 
 class ScheduleCreate(BaseModel):
@@ -16,6 +24,11 @@ class ScheduleCreate(BaseModel):
     category_id: Optional[int] = None
     tag_ids: list[int] = []
 
+    @field_validator("due_date", mode="after")
+    @classmethod
+    def coerce_due_date(cls, v):
+        return _ensure_beijing_tz(v)
+
 
 class ScheduleUpdate(BaseModel):
     title: Optional[str] = None
@@ -27,6 +40,11 @@ class ScheduleUpdate(BaseModel):
     estimated_minutes: Optional[int] = None
     category_id: Optional[int] = None
     tag_ids: Optional[list[int]] = None
+
+    @field_validator("due_date", mode="after")
+    @classmethod
+    def coerce_due_date(cls, v):
+        return _ensure_beijing_tz(v)
 
 
 class StatusUpdate(BaseModel):
