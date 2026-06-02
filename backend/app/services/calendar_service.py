@@ -1,8 +1,10 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from app.config import TZ
 
 from app.models.recurring_rule import RecurringRule
 from app.models.schedule import Schedule
@@ -10,11 +12,11 @@ from app.services.recurring_service import expand_recurring_dates
 
 
 async def get_month_calendar(db: AsyncSession, user_id: int, year: int, month: int) -> list[Schedule]:
-    start_date = datetime(year, month, 1, tzinfo=timezone.utc)
+    start_date = datetime(year, month, 1, tzinfo=TZ)
     if month == 12:
-        end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        end_date = datetime(year + 1, 1, 1, tzinfo=TZ)
     else:
-        end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        end_date = datetime(year, month + 1, 1, tzinfo=TZ)
 
     stmt = (
         select(Schedule)
@@ -39,12 +41,12 @@ async def get_month_calendar(db: AsyncSession, user_id: int, year: int, month: i
     schedules = list(result.unique().scalars().all())
 
     range_start = start_date.date()
-    range_end = (end_date - __import__('datetime').timedelta(days=1)).date()
+    range_end = (end_date - timedelta(days=1)).date()
     return _expand_recurring(schedules, range_start, range_end)
 
 
 async def get_week_calendar(db: AsyncSession, user_id: int, date_str: str) -> list[Schedule]:
-    target = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+    target = datetime.fromisoformat(date_str).replace(tzinfo=TZ)
     start_date = target.replace(hour=0, minute=0, second=0, microsecond=0)
     weekday = start_date.weekday()
     start_date = start_date.replace(day=start_date.day - weekday)
@@ -73,12 +75,12 @@ async def get_week_calendar(db: AsyncSession, user_id: int, date_str: str) -> li
     schedules = list(result.unique().scalars().all())
 
     range_start = start_date.date()
-    range_end = (end_date - __import__('datetime').timedelta(days=1)).date()
+    range_end = (end_date - timedelta(days=1)).date()
     return _expand_recurring(schedules, range_start, range_end)
 
 
 async def get_day_calendar(db: AsyncSession, user_id: int, date_str: str) -> list[Schedule]:
-    target = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+    target = datetime.fromisoformat(date_str).replace(tzinfo=TZ)
     start_date = target.replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date.replace(hour=23, minute=59, second=59)
 
@@ -120,7 +122,7 @@ def _expand_recurring(schedules: list[Schedule], range_start: date, range_end: d
                 base = ScheduleOut.model_validate(s).model_dump()
                 for d in dates:
                     entry = dict(base)
-                    entry["due_date"] = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+                    entry["due_date"] = datetime(d.year, d.month, d.day, tzinfo=TZ)
                     expanded.append(entry)
                 continue
 

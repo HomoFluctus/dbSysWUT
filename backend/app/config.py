@@ -1,4 +1,8 @@
+from datetime import timedelta, timezone
+
 from pydantic_settings import BaseSettings
+
+TZ = timezone(timedelta(hours=8))  # Beijing time (UTC+8)
 
 
 class Settings(BaseSettings):

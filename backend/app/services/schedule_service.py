@@ -1,8 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from app.config import TZ
 
 from app.core.exceptions import NotFoundError
 from app.models.activity_log import ActivityLog
@@ -25,7 +27,7 @@ async def list_schedules(
     stmt = select(Schedule).where(Schedule.user_id == user_id)
 
     if focus:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(TZ)
         end_of_today = now.replace(hour=23, minute=59, second=59, microsecond=999999)
         stmt = stmt.where(Schedule.due_date <= end_of_today)
         stmt = stmt.where(Schedule.status != ScheduleStatus.DONE)
@@ -152,7 +154,7 @@ async def update_schedule_status(
     old_status = schedule.status.value
     schedule.status = status
     if status == ScheduleStatus.DONE:
-        schedule.completed_at = datetime.now(timezone.utc)
+        schedule.completed_at = datetime.now(TZ)
 
     db.add(ActivityLog(
         schedule_id=schedule_id, user_id=user_id, action="status_changed",

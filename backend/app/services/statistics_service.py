@@ -1,7 +1,9 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import TZ
 
 from app.models.schedule import PriorityLevel, Schedule, ScheduleStatus
 
@@ -22,7 +24,7 @@ async def get_overview(db: AsyncSession, user_id: int) -> dict:
         Schedule.user_id == user_id,
         Schedule.status != ScheduleStatus.DONE,
         Schedule.status != ScheduleStatus.CANCELLED,
-        Schedule.due_date < datetime.now(timezone.utc),
+        Schedule.due_date < datetime.now(TZ),
     )
     overdue = (await db.execute(overdue_stmt)).scalar() or 0
 
@@ -37,7 +39,7 @@ async def get_overview(db: AsyncSession, user_id: int) -> dict:
 
 
 async def get_completion_rate(db: AsyncSession, user_id: int, days: int = 30) -> list[dict]:
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = datetime.now(TZ) - timedelta(days=days)
     stmt = (
         select(
             func.date(Schedule.due_date).label("day"),
@@ -80,7 +82,7 @@ async def get_priority_distribution(db: AsyncSession, user_id: int) -> dict:
 
 
 async def get_activity_heatmap(db: AsyncSession, user_id: int) -> dict:
-    since = datetime.now(timezone.utc) - timedelta(days=365)
+    since = datetime.now(TZ) - timedelta(days=365)
     merged: dict[str, int] = {}
 
     # Count by created_at
@@ -123,7 +125,7 @@ async def get_overdue_analysis(db: AsyncSession, user_id: int) -> list[dict]:
             Schedule.user_id == user_id,
             Schedule.status != ScheduleStatus.DONE,
             Schedule.status != ScheduleStatus.CANCELLED,
-            Schedule.due_date < datetime.now(timezone.utc),
+            Schedule.due_date < datetime.now(TZ),
         )
         .order_by(Schedule.due_date)
         .limit(20)
@@ -131,14 +133,14 @@ async def get_overdue_analysis(db: AsyncSession, user_id: int) -> list[dict]:
     result = await db.execute(stmt)
     schedules = result.scalars().all()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(TZ)
     return [
         {
             "schedule_id": s.schedule_id,
             "title": s.title,
             "due_date": s.due_date.isoformat() if s.due_date else None,
             "priority": s.priority.value,
-            "overdue_days": (now - s.due_date.replace(tzinfo=timezone.utc)).days if s.due_date else 0,
+            "overdue_days": (now - s.due_date.replace(tzinfo=TZ)).days if s.due_date else 0,
         }
         for s in schedules
     ]
