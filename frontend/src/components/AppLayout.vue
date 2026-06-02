@@ -20,7 +20,7 @@
           <span>首页</span>
         </el-menu-item>
         <el-menu-item index="/calendar">
-          <el-icon><Date /></el-icon>
+          <el-icon><Clock /></el-icon>
           <span>日历</span>
         </el-menu-item>
         <el-menu-item index="/schedules/new">
@@ -76,7 +76,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import {
   Calendar, HomeFilled, CirclePlus, Folder,
-  TrendCharts, Search, SwitchButton, UserFilled, Date
+  TrendCharts, Search, SwitchButton, UserFilled, Clock
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
