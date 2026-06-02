@@ -75,4 +75,56 @@ export const api = {
     const q = new URLSearchParams(params).toString()
     return request(`/search${q ? '?' + q : ''}`)
   },
+
+  // Dependencies
+  listDependencies: (scheduleId) => request(`/schedules/${scheduleId}/dependencies`),
+  createDependency: (scheduleId, body) => request(`/schedules/${scheduleId}/dependencies`, { method: 'POST', body: JSON.stringify(body) }),
+  deleteDependency: (scheduleId, depId) => request(`/schedules/${scheduleId}/dependencies/${depId}`, { method: 'DELETE' }),
+
+  // Duplicate
+  duplicateSchedule: (id) => request(`/schedules/${id}/duplicate`, { method: 'POST' }),
+
+  // Batch operations
+  batchUpdateStatus: (body) => request('/schedules/batch/status', { method: 'POST', body: JSON.stringify(body) }),
+  batchDelete: (body) => request('/schedules/batch/delete', { method: 'POST', body: JSON.stringify(body) }),
+
+  // Subtasks
+  listSubtasks: (scheduleId) => request(`/schedules/${scheduleId}/subtasks`),
+  createSubtask: (scheduleId, body) => request(`/schedules/${scheduleId}/subtasks`, { method: 'POST', body: JSON.stringify(body) }),
+  updateSubtask: (scheduleId, subtaskId, body) => request(`/schedules/${scheduleId}/subtasks/${subtaskId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteSubtask: (scheduleId, subtaskId) => request(`/schedules/${scheduleId}/subtasks/${subtaskId}`, { method: 'DELETE' }),
+
+  // Activity heatmap
+  getActivityHeatmap: () => request('/statistics/activity-heatmap'),
+
+  // Export
+  async exportCsv() {
+    const token = localStorage.getItem('access_token')
+    const res = await fetch(`${BASE}/schedules/export/csv`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) throw new Error('导出失败')
+    const blob = await res.blob()
+    downloadBlob(blob, 'schedules.csv')
+  },
+  async exportJson() {
+    const token = localStorage.getItem('access_token')
+    const res = await fetch(`${BASE}/schedules/export/json`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) throw new Error('导出失败')
+    const blob = await res.blob()
+    downloadBlob(blob, 'schedules.json')
+  },
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }

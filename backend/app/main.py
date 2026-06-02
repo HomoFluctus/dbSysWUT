@@ -27,6 +27,7 @@ async def startup():
     import app.models.recurring_rule  # noqa
     import app.models.reminder  # noqa
     import app.models.schedule_dependency  # noqa
+    import app.models.subtask  # noqa
     import app.models.activity_log  # noqa
     await init_db()
 

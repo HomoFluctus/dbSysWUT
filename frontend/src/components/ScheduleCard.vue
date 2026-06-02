@@ -1,9 +1,23 @@
 <template>
   <div
     class="schedule-card"
-    :class="{ overdue: isOverdue }"
-    @click="$router.push(`/schedules/${schedule.schedule_id}`)"
+    :class="{ overdue: isOverdue, 'batch-mode': batchMode }"
+    @click="onCardClick"
   >
+    <!-- Batch checkbox -->
+    <div v-if="batchMode" class="batch-check" @click.stop>
+      <el-checkbox :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" />
+    </div>
+
+    <!-- Quick actions overlay -->
+    <div class="quick-actions" @click.stop>
+      <el-tooltip content="复制日程" placement="top">
+        <el-button size="small" circle @click="handleDuplicate">
+          <el-icon :size="14"><CopyDocument /></el-icon>
+        </el-button>
+      </el-tooltip>
+    </div>
+
     <div class="card-header">
       <StatusBadge :status="schedule.status" />
       <PriorityBadge :priority="schedule.priority" />
@@ -28,21 +42,47 @@
     <div v-if="schedule.tags?.length" class="card-tags">
       <TagBadge v-for="t in schedule.tags" :key="t.tag_id" :tag="t" />
     </div>
+
+    <div v-if="schedule.subtasks?.length" class="card-subtasks">
+      <div class="subtask-progress">
+        <span class="subtask-bar-bg">
+          <span class="subtask-bar-fill" :style="{ width: subtaskPct + '%' }"></span>
+        </span>
+        <span class="subtask-text">{{ subtaskDone }}/{{ schedule.subtasks.length }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { Clock } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { Clock, CopyDocument } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { api } from '../utils/api.js'
 import PriorityBadge from './PriorityBadge.vue'
 import StatusBadge from './StatusBadge.vue'
 import TagBadge from './TagBadge.vue'
 
-const props = defineProps({ schedule: Object })
+const props = defineProps({
+  schedule: Object,
+  batchMode: { type: Boolean, default: false },
+  modelValue: { type: Boolean, default: false },
+})
+const emit = defineEmits(['update:modelValue', 'refresh'])
+const router = useRouter()
 
 const isOverdue = computed(() => {
   if (!props.schedule.due_date || props.schedule.status === 'done' || props.schedule.status === 'cancelled') return false
   return new Date(props.schedule.due_date) < new Date()
+})
+
+const subtaskDone = computed(() => {
+  return (props.schedule.subtasks || []).filter(s => s.completed).length
+})
+const subtaskPct = computed(() => {
+  if (!props.schedule.subtasks?.length) return 0
+  return Math.round((subtaskDone.value / props.schedule.subtasks.length) * 100)
 })
 
 function relativeDate(dateStr) {
@@ -55,6 +95,24 @@ function relativeDate(dateStr) {
   if (diffDays === 1) return '明天到期'
   return `${diffDays} 天后到期`
 }
+
+function onCardClick() {
+  if (props.batchMode) {
+    emit('update:modelValue', !props.modelValue)
+  } else {
+    router.push(`/schedules/${props.schedule.schedule_id}`)
+  }
+}
+
+async function handleDuplicate() {
+  try {
+    await api.duplicateSchedule(props.schedule.schedule_id)
+    ElMessage.success('日程已复制')
+    emit('refresh')
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
 </script>
 
 <style scoped>
@@ -65,6 +123,7 @@ function relativeDate(dateStr) {
   padding: 20px;
   cursor: pointer;
   transition: all var(--transition-normal);
+  position: relative;
 }
 .schedule-card:hover {
   transform: translateY(-4px);
@@ -74,6 +133,36 @@ function relativeDate(dateStr) {
 .schedule-card.overdue {
   border-left: 3px solid #ef4444;
 }
+
+/* Batch mode */
+.batch-check {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+}
+.schedule-card.batch-mode {
+  padding-left: 44px;
+}
+
+/* Quick actions */
+.quick-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  z-index: 2;
+}
+.schedule-card:hover .quick-actions {
+  opacity: 1;
+}
+.schedule-card.batch-mode .quick-actions {
+  display: none;
+}
+
 .card-header {
   display: flex;
   gap: 8px;
@@ -115,4 +204,22 @@ function relativeDate(dateStr) {
   flex-wrap: wrap;
   gap: 4px;
 }
+
+.card-subtasks { margin-top: 10px; }
+.subtask-progress { display: flex; align-items: center; gap: 8px; }
+.subtask-bar-bg {
+  flex: 1;
+  height: 4px;
+  background: #334155;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.subtask-bar-fill {
+  display: block;
+  height: 100%;
+  background: #22c55e;
+  border-radius: 2px;
+  transition: width var(--transition-normal);
+}
+.subtask-text { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 </style>

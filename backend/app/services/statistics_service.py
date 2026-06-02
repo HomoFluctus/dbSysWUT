@@ -79,6 +79,43 @@ async def get_priority_distribution(db: AsyncSession, user_id: int) -> dict:
     return {row.priority.value: row.cnt for row in result}
 
 
+async def get_activity_heatmap(db: AsyncSession, user_id: int) -> dict:
+    since = datetime.now(timezone.utc) - timedelta(days=365)
+    merged: dict[str, int] = {}
+
+    # Count by created_at
+    stmt_create = (
+        select(
+            func.date(Schedule.created_at).label("day"),
+            func.count().label("cnt"),
+        )
+        .where(Schedule.user_id == user_id, Schedule.created_at >= since)
+        .group_by(func.date(Schedule.created_at))
+    )
+    result = await db.execute(stmt_create)
+    for row in result:
+        merged[str(row.day)] = merged.get(str(row.day), 0) + row.cnt
+
+    # Count by due_date (only future or recent due dates)
+    stmt_due = (
+        select(
+            func.date(Schedule.due_date).label("day"),
+            func.count().label("cnt"),
+        )
+        .where(
+            Schedule.user_id == user_id,
+            Schedule.due_date.isnot(None),
+            Schedule.due_date >= since,
+        )
+        .group_by(func.date(Schedule.due_date))
+    )
+    result = await db.execute(stmt_due)
+    for row in result:
+        merged[str(row.day)] = merged.get(str(row.day), 0) + row.cnt
+
+    return merged
+
+
 async def get_overdue_analysis(db: AsyncSession, user_id: int) -> list[dict]:
     stmt = (
         select(Schedule)

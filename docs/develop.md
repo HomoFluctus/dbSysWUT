@@ -1,26 +1,8 @@
-# 日程管理系统 — 开发进展
+m# 日程管理系统 — 开发进展
 
 ## 当前状态
 
-全部 Phase 已完成，项目可以正常使用。
-
----
-
-## Phase 7: 收尾 ✅ 已完成
-
-**完成时间:** 2026-06-02
-
-### 已完成项
-
-1. **Alembic 迁移** — 初始化完成，生成首次自动迁移，支持 upgrade/downgrade
-2. **种子数据脚本** — `backend/seed.py`，插入 2 个用户、8 条日程（含过期/周期/紧急）、4 个分类、5 个标签
-3. **一键启动脚本** — `start.sh`，支持 install/seed/backend/frontend/all
-4. **README** — 含 ER 模型图、数据库原理映射表、API 概览、快速开始
-5. **CLAUDE.md** — 项目架构文档、启动命令、序列化陷阱说明
-
-### Bug 修复
-
-1. **逾期分析时区 bug** — `get_overdue_analysis` 中 naive datetime 与 aware datetime 相减报错，加上 `.replace(tzinfo=timezone.utc)` 修复
+Phase 1 已完成，全部端到端测试通过。Phase 2 待开始。
 
 ---
 
@@ -145,3 +127,92 @@ frontend/
 ```
 docs/plan.md, develop.md
 ```
+
+---
+
+## Phase 8: 交互增强 ✅ 已完成
+
+**完成时间:** 2026-06-02
+
+### 新增功能
+1. **子任务清单** — 日程下拆分检查项，支持勾选/取消/删除
+2. **活动热力图** — GitHub 风格年度活动热力图，按 created_at + due_date 双维度统计
+3. **全局键盘快捷键** — N 新建、K 看板、/ 搜索、? 帮助面板
+4. **明暗主题切换** — 完整 CSS 变量体系 light/dark 双主题，localStorage 持久化
+5. **卡通吉祥物** — 侧边栏青蛙形象+轮播鼓励语
+6. **Emoji 装饰** — 全页面添加 emoji 图标
+
+### 新增/修改文件
+- `backend/app/models/subtask.py` — Subtask 模型
+- `backend/app/schemas/subtask.py` — Subtask Pydantic schemas
+- `backend/app/services/subtask_service.py` — 子任务业务逻辑
+- `backend/app/api/schedules.py` — 新增 4 个子任务端点 + 导出修复
+- `backend/app/services/statistics_service.py` — 新增 `get_activity_heatmap()`
+- `backend/app/api/statistics.py` — 新增 `/activity-heatmap` 端点
+- `frontend/src/components/ActivityHeatmap.vue` — 热力图组件
+- `frontend/src/App.vue` — 完整明暗主题 CSS 变量
+- `frontend/src/components/AppLayout.vue` — 主题切换+快捷键+吉祥物
+
+### Bug 修复
+1. CSV/JSON 导出 401 → 改用 fetch+Blob+Authorization header
+2. 看板视图无数据 → per_page 从 200 改为 100（后端限制 le=100）
+3. 主题切换不明显 → :root 亮色系，html.dark 暗色系
+4. 热力图无色 → 合并 created_at + due_date 统计，修复 level-0 背景色
+
+---
+
+## Phase 9: 功能丰富 — 10 项新功能 🚧 进行中
+
+**计划时间:** 2026-06-02
+
+### 实现计划
+
+| 阶段 | 功能 | 状态 |
+|------|------|------|
+| 1 | 快速捕获 + 专注视图 | ✅ 已完成 |
+| 2 | 连续打卡 + 每日/每周回顾 | ⬜ 待实现 |
+| 3 | 活动日志视图 + 时间追踪 | ⬜ 待实现 |
+| 4 | 日程模板 | ⬜ 待实现 |
+| 5 | iCal 订阅导出 + 番茄钟 | ⬜ 待实现 |
+| 6 | 日程分享 | ⬜ 待实现 |
+
+### Phase 9.1 详情（快速捕获 + 专注视图）
+
+**快速捕获**
+- AppLayout 顶部栏新增输入框，前缀 Plus 图标
+- 输入标题 + Enter 即可创建日程（Ctrl+Enter 聚焦）
+- 默认 status=todo，其他字段留空
+- 创建成功显示 Toast 提示，清空输入框
+- 后端复用 `POST /schedules`，无需改动
+
+**专注视图**
+- 新路由 `/focus`，自动筛选今日及逾期日程
+- 三个分区：已逾期（红色）/ 今天（蓝色）/ 即将到来（橙色）
+- 自动排除已完成和已取消的日程
+- 后端 `list_schedules` 新增 `focus=True` 参数
+- 键盘快捷键：F 键跳转专注模式
+
+### Phase 9 全部新建文件
+
+**后端 (11)**:
+- `models/schedule_template.py`, `schemas/template.py`, `services/template_service.py`, `api/templates.py`
+- `services/ical_service.py`, `api/ical.py`
+- `services/activity_log_service.py`, `schemas/activity_log.py`, `api/activity_log.py`
+- `api/sharing.py`
+
+**前端 (7)**:
+- `views/FocusView.vue`, `views/ReviewView.vue`, `views/ActivityLogView.vue`, `views/SharedScheduleView.vue`
+- `components/StreakCard.vue`, `components/PomodoroTimer.vue`, `components/TemplatePicker.vue`
+- `stores/templates.js`
+
+**后端修改**:
+- `models/schedule.py` — 加 `actual_minutes`, `share_token`
+- `models/user.py` — 加 `ical_token`
+- `services/schedule_service.py` — focus 筛选, log_time, share_token
+- `services/statistics_service.py` — get_streaks, get_review, get_time_accuracy
+- `api/schedules.py` — focus, log-time, share 端点
+- `api/statistics.py` — streaks, review, time-accuracy 端点
+- `api/router.py`, `main.py`, `config.py`
+
+**前端修改**:
+- `router/index.js`, `components/AppLayout.vue`, `utils/api.js`, `views/DashboardView.vue`, `views/ScheduleDetailView.vue`

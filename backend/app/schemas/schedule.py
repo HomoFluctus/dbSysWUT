@@ -46,6 +46,7 @@ class ScheduleOut(BaseModel):
     estimated_minutes: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+    subtasks: list["SubtaskOut"] = []
 
     class Config:
         from_attributes = True
@@ -56,6 +57,7 @@ class ScheduleDetailOut(ScheduleOut):
     tags: list["TagOut"] = []
     recurring: Optional["RecurringRuleOut"] = None
     reminders: list["ReminderOut"] = []
+    subtasks: list["SubtaskOut"] = []
 
     class Config:
         from_attributes = True
@@ -72,3 +74,4 @@ from app.schemas.category import CategoryOut  # noqa: E402
 from app.schemas.tag import TagOut  # noqa: E402
 from app.schemas.reminder import ReminderOut  # noqa: E402
 from app.schemas.recurring import RecurringRuleOut  # noqa: E402
+from app.schemas.subtask import SubtaskOut  # noqa: E402

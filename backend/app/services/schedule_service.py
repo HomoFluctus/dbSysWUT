@@ -18,10 +18,18 @@ async def list_schedules(
     priority: str | None = None,
     category_id: int | None = None,
     tag_ids: list[int] | None = None,
+    focus: bool = False,
     page: int = 1,
     per_page: int = 20,
 ) -> PaginatedResponse:
     stmt = select(Schedule).where(Schedule.user_id == user_id)
+
+    if focus:
+        now = datetime.now(timezone.utc)
+        end_of_today = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        stmt = stmt.where(Schedule.due_date <= end_of_today)
+        stmt = stmt.where(Schedule.status != ScheduleStatus.DONE)
+        stmt = stmt.where(Schedule.status != ScheduleStatus.CANCELLED)
 
     if status:
         stmt = stmt.where(Schedule.status == status)
@@ -41,6 +49,7 @@ async def list_schedules(
     stmt = stmt.options(
         selectinload(Schedule.category),
         selectinload(Schedule.tags),
+        selectinload(Schedule.subtasks),
     ).order_by(Schedule.due_date.asc().nulls_last(), Schedule.priority.desc())
     stmt = stmt.offset((page - 1) * per_page).limit(per_page)
 
@@ -58,6 +67,7 @@ async def get_schedule(db: AsyncSession, schedule_id: int, user_id: int) -> Sche
             selectinload(Schedule.tags),
             selectinload(Schedule.recurring),
             selectinload(Schedule.reminders),
+            selectinload(Schedule.subtasks),
         )
     )
     schedule = result.unique().scalar_one_or_none()

@@ -10,8 +10,56 @@
 </script>
 
 <style>
-/* ===== Element Plus Dark Overrides ===== */
+/* ===== Light Theme (default) ===== */
+:root {
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-hover: 0 4px 16px rgba(0,0,0,0.12);
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  --el-bg-color: #ffffff;
+  --el-bg-color-overlay: #ffffff;
+  --el-bg-color-page: #f8fafc;
+  --el-border-color: #e2e8f0;
+  --el-border-color-light: #e2e8f0;
+  --el-border-color-lighter: #f1f5f9;
+  --el-text-color-primary: #0f172a;
+  --el-text-color-regular: #334155;
+  --el-text-color-secondary: #64748b;
+  --el-text-color-placeholder: #94a3b8;
+  --el-fill-color: #f1f5f9;
+  --el-fill-color-light: #f8fafc;
+  --el-fill-color-blank: #ffffff;
+  --el-color-primary: #6366f1;
+  --el-color-primary-light-3: #818cf8;
+  --el-color-primary-light-5: #a5b4fc;
+  --el-color-primary-light-7: #c7d2fe;
+  --el-color-primary-light-9: #e0e7ff;
+  --el-color-primary-dark-2: #4f46e5;
+  --el-mask-color: rgba(0,0,0,0.3);
+}
+
+/* ===== Dark Theme ===== */
 html.dark {
+  --bg-base: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-elevated: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-hover: 0 4px 16px rgba(0,0,0,0.5);
+
   --el-bg-color: #0f172a;
   --el-bg-color-overlay: #1e293b;
   --el-bg-color-page: #0f172a;
@@ -32,41 +80,26 @@ html.dark {
   --el-color-primary-light-9: #312e81;
   --el-color-primary-dark-2: #a5b4fc;
   --el-mask-color: rgba(0,0,0,0.6);
-  --el-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
-}
-
-/* ===== Design Tokens ===== */
-:root {
-  --bg-base: #0f172a;
-  --bg-surface: #1e293b;
-  --bg-elevated: #1e293b;
-  --text-primary: #f1f5f9;
-  --text-secondary: #e2e8f0;
-  --text-muted: #94a3b8;
-  --border-color: #334155;
-  --radius-lg: 12px;
-  --radius-md: 8px;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-hover: 0 4px 16px rgba(0,0,0,0.5);
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
 }
 
 /* ===== Global Reset ===== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: var(--el-font-family);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
   background: var(--bg-base);
   color: var(--text-primary);
   min-height: 100vh;
+  transition: background var(--transition-normal), color var(--transition-normal);
 }
 a { color: var(--el-color-primary); text-decoration: none; }
 
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
 /* ===== Page Transitions ===== */
 .page-fade-enter-active, .page-fade-leave-active {
@@ -103,5 +136,12 @@ a { color: var(--el-color-primary); text-decoration: none; }
 .el-drawer { --el-drawer-bg-color: var(--bg-surface); }
 .el-timeline-item__node { background: var(--border-color); }
 .el-descriptions__label { color: var(--text-muted); }
-.el-skeleton { --el-skeleton-color: #253349; --el-skeleton-to-color: #334155; }
+.el-skeleton {
+  --el-skeleton-color: #e2e8f0;
+  --el-skeleton-to-color: #f1f5f9;
+}
+html.dark .el-skeleton {
+  --el-skeleton-color: #253349;
+  --el-skeleton-to-color: #334155;
+}
 </style>

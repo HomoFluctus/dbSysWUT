@@ -1,15 +1,54 @@
 <template>
   <div class="dashboard">
     <div class="page-header">
-      <h2>我的日程</h2>
-      <el-button type="primary" @click="$router.push('/schedules/new')">
-        <el-icon><Plus /></el-icon>
-        新建日程
-      </el-button>
+      <h2>&#x1f4cb; 我的日程</h2>
+      <div class="header-actions">
+        <el-button v-if="!batchMode" @click="batchMode = true" plain size="default">
+          <el-icon><Select /></el-icon>
+          批量操作
+        </el-button>
+        <template v-else>
+          <el-button type="primary" size="default" @click="applyBatch">批量完成</el-button>
+          <el-button type="danger" size="default" @click="handleBatchDelete">批量删除</el-button>
+          <el-button size="default" @click="exitBatch">取消</el-button>
+        </template>
+        <el-dropdown trigger="click" v-if="!batchMode">
+          <el-button plain size="default">
+            <el-icon><Download /></el-icon>
+            导出
+            <el-icon><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="exportCSV">CSV 格式</el-dropdown-item>
+              <el-dropdown-item @click="exportJSON">JSON 格式</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-button type="primary" @click="$router.push('/schedules/new')">
+          <el-icon><Plus /></el-icon>
+          新建日程
+        </el-button>
+      </div>
     </div>
 
+    <!-- Batch bar -->
+    <div v-if="batchMode && selectedIds.length > 0" class="batch-bar">
+      <span class="batch-count">已选 <strong>{{ selectedIds.length }}</strong> 项</span>
+      <el-select v-model="batchStatus" placeholder="目标状态" size="default" style="width: 160px">
+        <el-option label="待办" value="todo" />
+        <el-option label="进行中" value="in_progress" />
+        <el-option label="已完成" value="done" />
+        <el-option label="已取消" value="cancelled" />
+      </el-select>
+      <el-button type="primary" @click="applyBatch">应用</el-button>
+    </div>
+
+    <!-- Heatmap -->
+    <ActivityHeatmap v-if="!batchMode" />
+
     <!-- Stats Row -->
-    <el-row :gutter="16" class="stats-row" v-if="stats">
+    <el-row :gutter="16" class="stats-row" v-if="stats && !batchMode">
       <el-col :span="4" v-for="s in statCards" :key="s.key">
         <div class="stat-card" :class="s.cls" @click="onStatClick(s.status)">
           <div class="stat-icon">
@@ -24,7 +63,7 @@
     </el-row>
 
     <!-- Filters -->
-    <div class="filter-bar">
+    <div class="filter-bar" v-if="!batchMode">
       <el-select v-model="store.filters.status" placeholder="全部状态" clearable @change="onFilterChange" size="default">
         <el-option label="待办" value="todo" />
         <el-option label="进行中" value="in_progress" />
@@ -46,13 +85,22 @@
     <el-skeleton v-if="store.loading" :rows="4" animated />
 
     <!-- Empty -->
-    <el-empty v-else-if="store.schedules.length === 0" description="暂无日程">
-      <el-button type="primary" @click="$router.push('/schedules/new')">创建第一个日程</el-button>
+    <el-empty v-else-if="store.schedules.length === 0" description="空空如也，今天要做什么呢？">
+      <div class="empty-emoji">&#x2728;&#x1f4ad;&#x2728;</div>
+      <el-button type="primary" @click="$router.push('/schedules/new')">&#x1f680; 创建第一个日程</el-button>
     </el-empty>
 
     <!-- Schedule Grid -->
     <div v-else class="schedule-grid">
-      <ScheduleCard v-for="s in store.schedules" :key="s.schedule_id" :schedule="s" />
+      <ScheduleCard
+        v-for="s in store.schedules"
+        :key="s.schedule_id"
+        :schedule="s"
+        :batch-mode="batchMode"
+        :model-value="selectedIds.includes(s.schedule_id)"
+        @update:model-value="(val) => toggleSelect(s.schedule_id, val)"
+        @refresh="load"
+      />
     </div>
 
     <!-- Pagination -->
@@ -75,13 +123,19 @@ import { useRoute } from 'vue-router'
 import { useScheduleStore } from '../stores/schedules.js'
 import { useCategoryStore } from '../stores/categories.js'
 import { api } from '../utils/api.js'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import ScheduleCard from '../components/ScheduleCard.vue'
-import { Plus, List, Check, Clock, WarningFilled, CircleCloseFilled, Loading } from '@element-plus/icons-vue'
+import ActivityHeatmap from '../components/ActivityHeatmap.vue'
+import { Plus, List, Check, Clock, WarningFilled, Loading, Select, Download, ArrowDown } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const store = useScheduleStore()
 const catStore = useCategoryStore()
 const stats = ref(null)
+
+const batchMode = ref(false)
+const selectedIds = ref([])
+const batchStatus = ref('')
 
 const statCards = [
   { key: 'total', label: '全部', icon: List, cls: 'total' },
@@ -128,6 +182,56 @@ function changePage(p) {
   load()
 }
 
+function toggleSelect(id, val) {
+  if (val) {
+    selectedIds.value.push(id)
+  } else {
+    selectedIds.value = selectedIds.value.filter(i => i !== id)
+  }
+}
+
+function exitBatch() {
+  batchMode.value = false
+  selectedIds.value = []
+  batchStatus.value = ''
+}
+
+async function applyBatch() {
+  if (selectedIds.value.length === 0) return
+  const status = batchStatus.value || 'done'
+  try {
+    await api.batchUpdateStatus({ schedule_ids: selectedIds.value, status })
+    ElMessage.success(`已将 ${selectedIds.value.length} 项标记为${status === 'todo' ? '待办' : status === 'in_progress' ? '进行中' : status === 'done' ? '已完成' : '已取消'}`)
+    exitBatch()
+    load()
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
+
+async function handleBatchDelete() {
+  if (selectedIds.value.length === 0) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 个日程？`, '批量删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
+    await api.batchDelete({ schedule_ids: selectedIds.value })
+    ElMessage.success(`已删除 ${selectedIds.value.length} 项`)
+    exitBatch()
+    load()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e.message)
+  }
+}
+
+async function exportCSV() {
+  try { await api.exportCsv(); ElMessage.success('CSV 导出成功') }
+  catch (e) { ElMessage.error(e.message) }
+}
+
+async function exportJSON() {
+  try { await api.exportJson(); ElMessage.success('JSON 导出成功') }
+  catch (e) { ElMessage.error(e.message) }
+}
+
 watch(() => route.query.q, () => { store.pagination.page = 1; load() })
 onMounted(load)
 </script>
@@ -144,6 +248,26 @@ onMounted(load)
   font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1px solid #6366f1;
+  border-radius: 10px;
+}
+.batch-count {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .stats-row { margin-bottom: 24px; }
@@ -193,4 +317,5 @@ onMounted(load)
   justify-content: center;
   margin-top: 28px;
 }
+.empty-emoji { font-size: 32px; margin-bottom: 8px; }
 </style>

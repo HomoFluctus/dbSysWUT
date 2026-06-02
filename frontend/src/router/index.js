@@ -18,12 +18,14 @@ const routes = [
     component: () => import('../components/AppLayout.vue'),
     children: [
       { path: '', name: 'Dashboard', component: () => import('../views/DashboardView.vue') },
+      { path: 'focus', name: 'Focus', component: () => import('../views/FocusView.vue') },
       { path: 'calendar', name: 'Calendar', component: () => import('../views/CalendarView.vue') },
       { path: 'schedules/new', name: 'ScheduleNew', component: () => import('../views/ScheduleFormView.vue') },
       { path: 'schedules/:id', name: 'ScheduleDetail', component: () => import('../views/ScheduleDetailView.vue') },
       { path: 'schedules/:id/edit', name: 'ScheduleEdit', component: () => import('../views/ScheduleFormView.vue') },
       { path: 'categories', name: 'Categories', component: () => import('../views/CategoriesView.vue') },
       { path: 'statistics', name: 'Statistics', component: () => import('../views/StatisticsView.vue') },
+      { path: 'kanban', name: 'Kanban', component: () => import('../views/KanbanView.vue') },
     ],
   },
 ]

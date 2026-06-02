@@ -1,6 +1,6 @@
 <template>
   <div class="categories-page">
-    <h2>分类管理</h2>
+    <h2>&#x1f3a8; 分类管理</h2>
 
     <div class="create-row">
       <el-input v-model="newName" placeholder="分类名称" style="width: 200px" />

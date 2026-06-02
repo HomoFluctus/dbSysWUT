@@ -1,6 +1,6 @@
 <template>
   <div class="form-page" v-loading="loading">
-    <h2>{{ isEdit ? '编辑日程' : '新建日程' }}</h2>
+    <h2>&#x1f4dd; {{ isEdit ? '编辑日程' : '新建日程' }}</h2>
 
     <el-form :model="form" label-position="top" class="schedule-form">
       <el-form-item label="标题" required>

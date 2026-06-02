@@ -53,3 +53,4 @@ class Schedule(BaseModel):
         cascade="all, delete-orphan",
     )
     activity_logs = relationship("ActivityLog", back_populates="schedule", cascade="all, delete-orphan")
+    subtasks = relationship("Subtask", back_populates="schedule", cascade="all, delete-orphan")

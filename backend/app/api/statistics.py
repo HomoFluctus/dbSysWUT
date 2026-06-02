@@ -36,3 +36,8 @@ async def priority_distribution(user: User = Depends(get_current_user), db: Asyn
 @router.get("/overdue")
 async def overdue(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     return await statistics_service.get_overdue_analysis(db, user.user_id)
+
+
+@router.get("/activity-heatmap")
+async def activity_heatmap(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await statistics_service.get_activity_heatmap(db, user.user_id)

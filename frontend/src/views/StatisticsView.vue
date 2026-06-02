@@ -1,6 +1,6 @@
 <template>
   <div class="stats-page" v-loading="loading">
-    <h2>统计分析</h2>
+    <h2>&#x1f4ca; 统计分析</h2>
 
     <!-- Overview row -->
     <el-row :gutter="16" class="overview-row" v-if="overview">
@@ -19,6 +19,8 @@
         <el-statistic title="完成率" :value="completionRate" suffix="%" :precision="1" />
       </el-col>
     </el-row>
+
+    <ActivityHeatmap />
 
     <el-row :gutter="16" class="chart-row">
       <el-col :span="12">
@@ -84,6 +86,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { api } from '../utils/api.js'
 import StatisticsChart from '../components/StatisticsChart.vue'
+import ActivityHeatmap from '../components/ActivityHeatmap.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 
 const loading = ref(true)

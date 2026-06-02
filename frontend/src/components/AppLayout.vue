@@ -1,5 +1,5 @@
 <template>
-  <div class="app-layout">
+  <div class="app-layout" @keydown="onKeydown" tabindex="-1" ref="layoutRef">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="logo-area">
@@ -17,25 +17,41 @@
       >
         <el-menu-item index="/">
           <el-icon><HomeFilled /></el-icon>
-          <span>首页</span>
+          <span>首页 &#x1f3e0;</span>
+        </el-menu-item>
+        <el-menu-item index="/focus">
+          <el-icon><Aim /></el-icon>
+          <span>专注模式 &#x1f3af;</span>
         </el-menu-item>
         <el-menu-item index="/calendar">
           <el-icon><Clock /></el-icon>
-          <span>日历</span>
+          <span>日历 &#x1f4c5;</span>
         </el-menu-item>
         <el-menu-item index="/schedules/new">
           <el-icon><CirclePlus /></el-icon>
-          <span>新建日程</span>
+          <span>新建日程 &#x2728;</span>
         </el-menu-item>
         <el-menu-item index="/categories">
           <el-icon><Folder /></el-icon>
-          <span>分类管理</span>
+          <span>分类管理 &#x1f4c2;</span>
         </el-menu-item>
         <el-menu-item index="/statistics">
           <el-icon><TrendCharts /></el-icon>
-          <span>统计分析</span>
+          <span>统计分析 &#x1f4ca;</span>
+        </el-menu-item>
+        <el-menu-item index="/kanban">
+          <el-icon><DataBoard /></el-icon>
+          <span>看板视图 &#x1f3af;</span>
         </el-menu-item>
       </el-menu>
+
+      <!-- Mascot -->
+      <div class="mascot-area">
+        <div class="mascot-bubble" :class="{ waving: mascotWave }" @click="mascotWave = !mascotWave">
+          <span class="mascot-emoji">&#x1f438;</span>
+          <span class="mascot-text">{{ mascotMessages[currentMsg] }}</span>
+        </div>
+      </div>
 
       <div class="sidebar-footer">
         <div class="user-info" v-if="auth.user">
@@ -52,42 +68,114 @@
     <!-- Main content -->
     <main class="main">
       <header class="top-bar">
-        <div class="search-box">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索日程..."
-            :prefix-icon="Search"
-            @keyup.enter="doSearch"
-            clearable
-            class="search-input"
-          />
+        <div class="top-left">
+          <div class="quick-capture" ref="quickCaptureRef">
+            <el-input
+              ref="quickCaptureInputRef"
+              v-model="quickCaptureText"
+              placeholder="快速捕获... (Ctrl+Enter)"
+              :prefix-icon="Plus"
+              @keyup.enter="doQuickCapture"
+              :disabled="quickCapturing"
+              clearable
+              size="default"
+              class="quick-capture-input"
+            />
+          </div>
+          <div class="search-box" ref="searchRef">
+            <el-input
+              ref="searchInputRef"
+              v-model="searchQuery"
+              placeholder="搜索日程... (/)"
+              :prefix-icon="Search"
+              @keyup.enter="doSearch"
+              clearable
+              class="search-input"
+            />
+          </div>
+        </div>
+        <div class="top-right">
+          <el-tooltip :content="isDark ? '切换亮色' : '切换暗色'" placement="bottom">
+            <el-button circle @click="toggleTheme" class="theme-btn">
+              <el-icon :size="16"><component :is="isDark ? Sunny : Moon" /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-button circle @click="showShortcuts = true" class="help-btn">
+            <el-icon :size="14"><QuestionFilled /></el-icon>
+          </el-button>
         </div>
       </header>
       <div class="content">
         <router-view />
       </div>
     </main>
+
+    <!-- Shortcuts help -->
+    <el-dialog v-model="showShortcuts" title="键盘快捷键" width="380px">
+      <table class="shortcut-table">
+        <tr v-for="s in shortcuts" :key="s.key">
+          <td class="shortcut-key"><kbd>{{ s.key }}</kbd></td>
+          <td>{{ s.desc }}</td>
+        </tr>
+      </table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { api } from '../utils/api.js'
+import { ElMessage } from 'element-plus'
 import {
   Calendar, HomeFilled, CirclePlus, Folder,
-  TrendCharts, Search, SwitchButton, UserFilled, Clock
+  TrendCharts, Search, SwitchButton, UserFilled, Clock, DataBoard,
+  Sunny, Moon, QuestionFilled, Aim, Plus,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const searchQuery = ref('')
+const searchInputRef = ref(null)
+const searchRef = ref(null)
+const layoutRef = ref(null)
+const showShortcuts = ref(false)
+const quickCaptureText = ref('')
+const quickCaptureInputRef = ref(null)
+const quickCapturing = ref(false)
+
+const mascotWave = ref(false)
+const currentMsg = ref(0)
+const mascotMessages = [
+  '今天也要加油哦！',
+  '别忘了休息～',
+  '你最棒了！',
+  '又是元气满满的一天！',
+  '记得喝水哦~',
+  '今天完成了多少任务呀？',
+]
+
+// Cycle mascot messages
+setInterval(() => {
+  currentMsg.value = (currentMsg.value + 1) % mascotMessages.length
+}, 15000)
+
+const isDark = ref(true)
+const shortcuts = [
+  { key: 'N', desc: '新建日程' },
+  { key: 'F', desc: '专注模式' },
+  { key: 'K', desc: '看板视图' },
+  { key: '/', desc: '聚焦搜索框' },
+  { key: 'Ctrl+Enter', desc: '快速捕获' },
+  { key: '?', desc: '显示快捷键帮助' },
+]
 
 const activeRoute = computed(() => {
   const p = route.path
   if (p.startsWith('/schedules') && p !== '/schedules/new') return '/'
-  return p === '/' || p === '/calendar' || p === '/schedules/new' || p === '/categories' || p === '/statistics' ? p : '/'
+  return ['/', '/focus', '/calendar', '/schedules/new', '/categories', '/statistics', '/kanban'].includes(p) ? p : '/'
 })
 
 function doSearch() {
@@ -95,12 +183,81 @@ function doSearch() {
     router.push({ path: '/', query: { q: searchQuery.value.trim() } })
   }
 }
+
+async function doQuickCapture() {
+  const title = quickCaptureText.value.trim()
+  if (!title || quickCapturing.value) return
+  quickCapturing.value = true
+  try {
+    await api.createSchedule({ title })
+    ElMessage.success('日程已创建')
+    quickCaptureText.value = ''
+  } catch (e) {
+    ElMessage.error(e.message || '创建失败')
+  } finally {
+    quickCapturing.value = false
+  }
+}
+
+function toggleTheme() {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+}
+
+function onKeydown(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault()
+      doQuickCapture()
+      return
+    }
+    if (e.key !== '/') return
+    if (!searchInputRef.value) return
+    e.preventDefault()
+    searchInputRef.value.focus()
+    return
+  }
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault()
+    quickCaptureInputRef.value?.focus()
+  } else if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault()
+    router.push('/schedules/new')
+  } else if (e.key === 'f' || e.key === 'F') {
+    e.preventDefault()
+    router.push('/focus')
+  } else if (e.key === 'k' || e.key === 'K') {
+    e.preventDefault()
+    router.push('/kanban')
+  } else if (e.key === '/') {
+    e.preventDefault()
+    nextTick(() => searchInputRef.value?.focus())
+  } else if (e.key === '?') {
+    e.preventDefault()
+    showShortcuts.value = true
+  }
+}
+
+onMounted(() => {
+  const saved = localStorage.getItem('theme')
+  if (saved === 'light') {
+    isDark.value = false
+    document.documentElement.classList.remove('dark')
+  }
+  layoutRef.value?.focus()
+})
 </script>
 
 <style scoped>
 .app-layout {
   display: flex;
   min-height: 100vh;
+  outline: none;
 }
 
 .sidebar {
@@ -149,6 +306,42 @@ function doSearch() {
   color: #a5b4fc !important;
 }
 
+.mascot-area {
+  padding: 8px 12px;
+}
+.mascot-bubble {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1));
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+.mascot-bubble:hover {
+  background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.2));
+  transform: scale(1.02);
+}
+.mascot-bubble.waving .mascot-emoji { animation: mascotBounce 0.5s ease; }
+.mascot-emoji {
+  font-size: 28px;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+@keyframes mascotBounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
+  50% { transform: translateY(0); }
+  70% { transform: translateY(-4px); }
+}
+.mascot-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid var(--border-color);
@@ -185,13 +378,37 @@ function doSearch() {
   position: sticky;
   top: 0;
   z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+.top-left { flex: 1; display: flex; gap: 12px; align-items: center; }
+.top-right { display: flex; gap: 8px; align-items: center; }
+.quick-capture-input { width: 240px; }
 .search-input {
   max-width: 420px;
+}
+
+.theme-btn, .help-btn {
+  color: var(--text-muted) !important;
+  border-color: var(--border-color) !important;
 }
 
 .content {
   flex: 1;
   padding: 28px;
+}
+
+.shortcut-table { width: 100%; border-collapse: collapse; }
+.shortcut-table td { padding: 8px 4px; font-size: 14px; }
+.shortcut-table kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: monospace;
+  background: var(--bg-base);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
 }
 </style>
