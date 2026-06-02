@@ -85,7 +85,4 @@ backend/app/
 
 ## 开发阶段
 
-- Phase 1: 基础设施、模型、全部 API、前端框架 ✅
-- Phase 2-7: 认证联调、CRUD 完善、日历、提醒周期、统计、收尾 (待完成)
-
-详细计划见 `docs/plan.md`，进展记录见 `docs/develop.md`。
+全部 Phase 已完成 ✅（Phase 1-7），详见 `docs/develop.md`。
