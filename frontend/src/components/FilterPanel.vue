@@ -1,20 +1,20 @@
 <template>
   <div class="filter-panel">
-    <select v-model="localFilters.status" @change="emit">
+    <select v-model="localFilters.status" @change="emitFilter">
       <option value="">All Status</option>
       <option value="todo">Todo</option>
       <option value="in_progress">In Progress</option>
       <option value="done">Done</option>
       <option value="cancelled">Cancelled</option>
     </select>
-    <select v-model="localFilters.priority" @change="emit">
+    <select v-model="localFilters.priority" @change="emitFilter">
       <option value="">All Priority</option>
       <option value="low">Low</option>
       <option value="medium">Medium</option>
       <option value="high">High</option>
       <option value="urgent">Urgent</option>
     </select>
-    <select v-model="localFilters.category_id" @change="emit">
+    <select v-model="localFilters.category_id" @change="emitFilter">
       <option value="">All Categories</option>
       <option v-for="c in categories" :key="c.category_id" :value="c.category_id">{{ c.name }}</option>
     </select>
@@ -31,7 +31,7 @@ const localFilters = reactive({ ...props.filters })
 
 watch(() => props.filters, (v) => Object.assign(localFilters, v))
 
-function emit() {
+function emitFilter() {
   emit('update:filters', { ...localFilters })
 }
 </script>
