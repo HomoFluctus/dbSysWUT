@@ -1,19 +1,19 @@
 <template>
-  <span class="badge" :style="{ background: bg, color: '#fff' }">{{ label }}</span>
+  <el-tag :color="color" :style="{ color: '#fff', border: 'none', fontWeight: 600 }" size="small" effect="dark">
+    {{ label }}
+  </el-tag>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { getPriorityLabel, getPriorityColor } from '../utils/date.js'
 
 const props = defineProps({ priority: String })
-const label = computed(() => getPriorityLabel(props.priority))
-const bg = computed(() => getPriorityColor(props.priority))
-</script>
-
-<style scoped>
-.badge {
-  display: inline-block; padding: 2px 8px; border-radius: 12px;
-  font-size: 11px; font-weight: 600;
+const map = {
+  low: { label: '低', color: '#22c55e' },
+  medium: { label: '中', color: '#ca8a04' },
+  high: { label: '高', color: '#ea580c' },
+  urgent: { label: '紧急', color: '#dc2626' },
 }
-</style>
+const label = computed(() => map[props.priority]?.label || props.priority)
+const color = computed(() => map[props.priority]?.color || '#64748b')
+</script>

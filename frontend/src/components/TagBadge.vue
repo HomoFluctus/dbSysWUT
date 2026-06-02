@@ -1,16 +1,13 @@
 <template>
-  <span class="tag-badge" :style="{ background: tag.color + '30', color: tag.color, borderColor: tag.color + '50' }">
+  <el-tag
+    :style="{ borderColor: tag.color + '60', color: tag.color, background: tag.color + '18' }"
+    size="small"
+    effect="plain"
+  >
     {{ tag.name }}
-  </span>
+  </el-tag>
 </template>
 
 <script setup>
 defineProps({ tag: Object })
 </script>
-
-<style scoped>
-.tag-badge {
-  display: inline-block; padding: 1px 8px; border-radius: 10px;
-  font-size: 11px; border: 1px solid; margin-right: 4px;
-}
-</style>

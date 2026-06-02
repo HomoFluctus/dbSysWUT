@@ -1,70 +1,91 @@
 <template>
-  <div class="detail-page" v-if="schedule">
-    <div class="detail-header">
-      <div>
-        <div class="badge-row">
-          <StatusBadge :status="schedule.status" />
-          <PriorityBadge :priority="schedule.priority" />
+  <div class="detail-page" v-loading="loading">
+    <template v-if="schedule">
+      <div class="detail-hero">
+        <div>
+          <div class="badge-row">
+            <StatusBadge :status="schedule.status" />
+            <PriorityBadge :priority="schedule.priority" />
+          </div>
+          <h2 class="detail-title">{{ schedule.title }}</h2>
         </div>
-        <h2>{{ schedule.title }}</h2>
+        <div class="hero-actions">
+          <el-button-group>
+            <el-button
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              :type="schedule.status === opt.value ? 'primary' : 'default'"
+              size="small"
+              @click="changeStatus(opt.value)"
+            >{{ opt.label }}</el-button>
+          </el-button-group>
+          <router-link :to="`/schedules/${schedule.schedule_id}/edit`">
+            <el-button type="primary" plain size="small">
+              <el-icon><Edit /></el-icon>编辑
+            </el-button>
+          </router-link>
+          <el-popconfirm title="确定删除这个日程？" confirm-button-text="删除" @confirm="handleDelete">
+            <template #reference>
+              <el-button type="danger" plain size="small">
+                <el-icon><Delete /></el-icon>删除
+              </el-button>
+            </template>
+          </el-popconfirm>
+        </div>
       </div>
-      <div class="detail-actions">
-        <select @change="changeStatus($event.target.value)" :value="schedule.status">
-          <option value="todo">Todo</option>
-          <option value="in_progress">In Progress</option>
-          <option value="done">Done</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <router-link :to="`/schedules/${schedule.schedule_id}/edit`" class="btn-edit">Edit</router-link>
-        <button @click="handleDelete" class="btn-delete">Delete</button>
-      </div>
-    </div>
 
-    <div v-if="schedule.description" class="section">
-      <h4>Description</h4>
-      <p>{{ schedule.description }}</p>
-    </div>
+      <el-descriptions :column="2" border class="detail-meta">
+        <el-descriptions-item label="到期时间">
+          {{ schedule.due_date ? new Date(schedule.due_date).toLocaleString('zh-CN') : '未设置' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="预计耗时">
+          {{ schedule.estimated_minutes ? schedule.estimated_minutes + ' 分钟' : '未设置' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="分类">
+          <el-tag :color="schedule.category?.color" effect="dark" size="small" v-if="schedule.category">
+            {{ schedule.category.name }}
+          </el-tag>
+          <span v-else>无</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间">
+          {{ new Date(schedule.created_at).toLocaleString('zh-CN') }}
+        </el-descriptions-item>
+      </el-descriptions>
 
-    <div class="meta-grid">
-      <div class="meta-item">
-        <span class="meta-label">Due Date</span>
-        <span class="meta-value">{{ formatDateTime(schedule.due_date) || 'Not set' }}</span>
+      <div v-if="schedule.description" class="section">
+        <h4>描述</h4>
+        <p>{{ schedule.description }}</p>
       </div>
-      <div class="meta-item">
-        <span class="meta-label">Estimated</span>
-        <span class="meta-value">{{ schedule.estimated_minutes ? schedule.estimated_minutes + ' min' : 'Not set' }}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">Category</span>
-        <span class="meta-value" :style="{ color: schedule.category?.color }">
-          {{ schedule.category?.name || 'None' }}
-        </span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">Created</span>
-        <span class="meta-value">{{ formatDateTime(schedule.created_at) }}</span>
-      </div>
-    </div>
 
-    <div v-if="schedule.tags?.length" class="section">
-      <h4>Tags</h4>
-      <div class="tags-row">
-        <TagBadge v-for="t in schedule.tags" :key="t.tag_id" :tag="t" />
+      <div v-if="schedule.tags?.length" class="section">
+        <h4>标签</h4>
+        <div class="tag-row">
+          <TagBadge v-for="t in schedule.tags" :key="t.tag_id" :tag="t" />
+        </div>
       </div>
-    </div>
 
-    <div v-if="schedule.recurring" class="section">
-      <h4>Recurring</h4>
-      <p>{{ schedule.recurring.freq }}, every {{ schedule.recurring.interval }} from {{ schedule.recurring.start_date }}<span v-if="schedule.recurring.end_date"> to {{ schedule.recurring.end_date }}</span></p>
-    </div>
-
-    <div v-if="schedule.reminders?.length" class="section">
-      <h4>Reminders</h4>
-      <div v-for="r in schedule.reminders" :key="r.reminder_id" class="reminder-item">
-        <span>{{ formatDateTime(r.remind_at) }}</span>
-        <span>{{ r.sent ? 'Sent' : 'Pending' }}</span>
+      <div v-if="schedule.recurring" class="section">
+        <h4>周期规则</h4>
+        <el-tag type="info" effect="plain">
+          {{ schedule.recurring.freq === 'daily' ? '每天' : schedule.recurring.freq === 'weekly' ? '每周' : schedule.recurring.freq === 'monthly' ? '每月' : '每年' }}
+          ，间隔 {{ schedule.recurring.interval }} 次
+        </el-tag>
       </div>
-    </div>
+
+      <div v-if="schedule.reminders?.length" class="section">
+        <h4>提醒</h4>
+        <el-timeline>
+          <el-timeline-item
+            v-for="r in schedule.reminders"
+            :key="r.reminder_id"
+            :timestamp="new Date(r.remind_at).toLocaleString('zh-CN')"
+            :type="r.sent ? 'success' : 'primary'"
+          >
+            {{ r.sent ? '已发送' : '待发送' }}
+          </el-timeline-item>
+        </el-timeline>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -72,62 +93,76 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useScheduleStore } from '../stores/schedules.js'
-import { formatDateTime } from '../utils/date.js'
+import { ElMessage } from 'element-plus'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import TagBadge from '../components/TagBadge.vue'
+import { Edit, Delete } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const store = useScheduleStore()
 const schedule = ref(null)
+const loading = ref(true)
+
+const statusOptions = [
+  { label: '待办', value: 'todo' },
+  { label: '进行中', value: 'in_progress' },
+  { label: '已完成', value: 'done' },
+  { label: '已取消', value: 'cancelled' },
+]
 
 onMounted(async () => {
-  schedule.value = await store.fetchSchedule(route.params.id)
+  try {
+    schedule.value = await store.fetchSchedule(route.params.id)
+  } finally {
+    loading.value = false
+  }
 })
 
 async function changeStatus(status) {
-  schedule.value = await store.changeStatus(route.params.id, status)
+  try {
+    schedule.value = await store.changeStatus(route.params.id, status)
+    ElMessage.success('状态已更新')
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
 }
 
 async function handleDelete() {
-  if (confirm('Delete this task?')) {
+  try {
     await store.deleteSchedule(route.params.id)
+    ElMessage.success('日程已删除')
     router.push('/')
+  } catch (e) {
+    ElMessage.error(e.message)
   }
 }
 </script>
 
 <style scoped>
 .detail-page { max-width: 750px; }
-.detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+.detail-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
 .badge-row { display: flex; gap: 8px; margin-bottom: 10px; }
-h2 { font-size: 24px; color: #f1f5f9; }
-.detail-actions { display: flex; gap: 8px; align-items: center; }
-.detail-actions select {
-  padding: 8px 12px; border-radius: 8px; border: 1px solid #334155;
-  background: #1e293b; color: #e2e8f0; font-size: 13px;
+.detail-title { font-size: 26px; font-weight: 700; color: var(--text-primary); }
+.hero-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.detail-meta { margin-bottom: 24px; }
+.section { margin-bottom: 24px; }
+.section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
 }
-.btn-edit {
-  padding: 8px 18px; background: #6366f1; color: #fff; border-radius: 8px; font-size: 13px;
-}
-.btn-delete {
-  padding: 8px 18px; background: #7f1d1d; color: #fca5a5; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;
-}
-.btn-delete:hover { background: #991b1b; }
-
-.section { margin-bottom: 20px; }
-.section h4 { font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
-.section p { font-size: 14px; color: #cbd5e1; line-height: 1.6; }
-
-.meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
-.meta-item { background: #1e293b; padding: 14px; border-radius: 10px; border: 1px solid #334155; }
-.meta-label { display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; }
-.meta-value { font-size: 14px; color: #e2e8f0; }
-
-.tags-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.reminder-item {
-  display: flex; justify-content: space-between; padding: 8px 0;
-  border-bottom: 1px solid #1e293b; font-size: 13px; color: #cbd5e1;
-}
+.section p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+.tag-row { display: flex; gap: 6px; flex-wrap: wrap; }
 </style>
