@@ -28,14 +28,14 @@
 或者分别启动：
 
 ```bash
-# 终端 1: 后端 (http://localhost:8000)
-cd backend && uvicorn app.main:app --reload
+# 终端 1: 后端 (http://localhost:8001)
+cd backend && uvicorn app.main:app --reload --port 8001
 
 # 终端 2: 前端 (http://localhost:3000)
 cd frontend && npm run dev
 ```
 
-API 文档: http://localhost:8000/docs
+API 文档: http://localhost:8001/docs
 
 种子用户: `alice` / `123456` (含完整演示数据)
 

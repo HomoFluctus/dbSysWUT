@@ -23,9 +23,9 @@ seed() {
 }
 
 run_backend() {
-    echo ">>> 启动后端 http://localhost:8000"
-    echo "    API 文档: http://localhost:8000/docs"
-    cd "$ROOT/backend" && $UVI app.main:app --host 0.0.0.0 --port 8000 --reload
+    echo ">>> 启动后端 http://localhost:8001"
+    echo "    API 文档: http://localhost:8001/docs"
+    cd "$ROOT/backend" && $UVI app.main:app --host 0.0.0.0 --port 8001 --reload
 }
 
 run_frontend() {
@@ -53,7 +53,7 @@ case "${1:-all}" in
         seed
         echo ""
         echo ">>> 启动后端 (后台) + 前端..."
-        cd "$ROOT/backend" && $UVI app.main:app --host 0.0.0.0 --port 8000 &
+        cd "$ROOT/backend" && $UVI app.main:app --host 0.0.0.0 --port 8001 &
         sleep 2
         cd "$ROOT/frontend" && npm run dev
         ;;

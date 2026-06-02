@@ -10,9 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 启动命令
 
 ```bash
-# 后端 (http://localhost:8000)
-cd backend && ~/.local/bin/uvicorn app.main:app --reload --port 8000
-# API 文档: http://localhost:8000/docs
+# 后端 (http://localhost:8001)
+cd backend && ~/.local/bin/uvicorn app.main:app --reload --port 8001
+# API 文档: http://localhost:8001/docs
 
 # 前端 (http://localhost:3000，自动代理 /api 到后端)
 cd frontend && npm run dev
@@ -81,7 +81,7 @@ backend/app/
 
 - `backend/app/config.py` 中数据库 URL 使用绝对路径 `/home/suhongzhou/dbSysWUT/data/scheduler.db`
 - 切换环境时需要修改此路径
-- 前端通过 Vite proxy 将 `/api` 转发到 `http://127.0.0.1:8000`
+- 前端通过 Vite proxy 将 `/api` 转发到 `http://127.0.0.1:8001`
 
 ## 开发阶段
 
