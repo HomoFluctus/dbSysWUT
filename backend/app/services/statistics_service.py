@@ -101,7 +101,7 @@ async def get_overdue_analysis(db: AsyncSession, user_id: int) -> list[dict]:
             "title": s.title,
             "due_date": s.due_date.isoformat() if s.due_date else None,
             "priority": s.priority.value,
-            "overdue_days": (now - s.due_date).days if s.due_date else 0,
+            "overdue_days": (now - s.due_date.replace(tzinfo=timezone.utc)).days if s.due_date else 0,
         }
         for s in schedules
     ]

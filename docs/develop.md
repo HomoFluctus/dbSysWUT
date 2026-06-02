@@ -2,7 +2,25 @@
 
 ## 当前状态
 
-Phase 1 已完成，全部端到端测试通过。Phase 2 待开始。
+全部 Phase 已完成，项目可以正常使用。
+
+---
+
+## Phase 7: 收尾 ✅ 已完成
+
+**完成时间:** 2026-06-02
+
+### 已完成项
+
+1. **Alembic 迁移** — 初始化完成，生成首次自动迁移，支持 upgrade/downgrade
+2. **种子数据脚本** — `backend/seed.py`，插入 2 个用户、8 条日程（含过期/周期/紧急）、4 个分类、5 个标签
+3. **一键启动脚本** — `start.sh`，支持 install/seed/backend/frontend/all
+4. **README** — 含 ER 模型图、数据库原理映射表、API 概览、快速开始
+5. **CLAUDE.md** — 项目架构文档、启动命令、序列化陷阱说明
+
+### Bug 修复
+
+1. **逾期分析时区 bug** — `get_overdue_analysis` 中 naive datetime 与 aware datetime 相减报错，加上 `.replace(tzinfo=timezone.utc)` 修复
 
 ---
 
