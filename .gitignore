@@ -17,7 +17,7 @@ dist/
 *.swo
 
 # Database
-data/*.db
+data/*
 
 # Environment
 .env
