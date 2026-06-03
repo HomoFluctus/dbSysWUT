@@ -43,6 +43,14 @@
           <el-icon><DataBoard /></el-icon>
           <span>看板视图 &#x1f3af;</span>
         </el-menu-item>
+        <el-menu-item index="/review">
+          <el-icon><Notebook /></el-icon>
+          <span>回顾 &#x1f4dd;</span>
+        </el-menu-item>
+        <el-menu-item index="/activity-log">
+          <el-icon><Bell /></el-icon>
+          <span>活动日志 &#x1f4c3;</span>
+        </el-menu-item>
       </el-menu>
 
       <!-- Mascot -->
@@ -131,7 +139,7 @@ import { ElMessage } from 'element-plus'
 import {
   Calendar, HomeFilled, CirclePlus, Folder,
   TrendCharts, Search, SwitchButton, UserFilled, Clock, DataBoard,
-  Sunny, Moon, QuestionFilled, Aim, Plus,
+  Sunny, Moon, QuestionFilled, Aim, Plus, Notebook, Bell,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -175,7 +183,7 @@ const shortcuts = [
 const activeRoute = computed(() => {
   const p = route.path
   if (p.startsWith('/schedules') && p !== '/schedules/new') return '/'
-  return ['/', '/focus', '/calendar', '/schedules/new', '/categories', '/statistics', '/kanban'].includes(p) ? p : '/'
+  return ['/', '/focus', '/calendar', '/schedules/new', '/categories', '/statistics', '/kanban', '/review', '/activity-log'].includes(p) ? p : '/'
 })
 
 function doSearch() {

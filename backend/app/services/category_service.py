@@ -64,5 +64,7 @@ async def delete_category(db: AsyncSession, category_id: int, user_id: int) -> N
     cat = result.scalar_one_or_none()
     if not cat:
         raise NotFoundError("Category not found")
+    if cat.is_default:
+        raise ValueError("Cannot delete the default category")
     await db.delete(cat)
     await db.flush()

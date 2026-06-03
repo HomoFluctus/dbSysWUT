@@ -22,6 +22,7 @@
             <el-dropdown-menu>
               <el-dropdown-item @click="exportCSV">CSV 格式</el-dropdown-item>
               <el-dropdown-item @click="exportJSON">JSON 格式</el-dropdown-item>
+              <el-dropdown-item divided @click="copyIcalLink">iCal 订阅链接</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -46,6 +47,9 @@
 
     <!-- Heatmap -->
     <ActivityHeatmap v-if="!batchMode" />
+
+    <!-- Streaks -->
+    <StreakCard v-if="!batchMode" />
 
     <!-- Stats Row -->
     <el-row :gutter="16" class="stats-row" v-if="stats && !batchMode">
@@ -126,6 +130,7 @@ import { api } from '../utils/api.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ScheduleCard from '../components/ScheduleCard.vue'
 import ActivityHeatmap from '../components/ActivityHeatmap.vue'
+import StreakCard from '../components/StreakCard.vue'
 import { Plus, List, Check, Clock, WarningFilled, Loading, Select, Download, ArrowDown } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -147,6 +152,8 @@ const statCards = [
 
 async function load() {
   await catStore.fetchCategories()
+  // Read filters from query params (set by category management click, etc.)
+  if (route.query.category_id) store.filters.category_id = Number(route.query.category_id)
   let params = { ...store.filters, page: store.pagination.page, per_page: store.pagination.per_page }
   if (route.query.q) {
     const data = await api.search({ q: route.query.q, ...params })
@@ -230,6 +237,17 @@ async function exportCSV() {
 async function exportJSON() {
   try { await api.exportJson(); ElMessage.success('JSON 导出成功') }
   catch (e) { ElMessage.error(e.message) }
+}
+
+async function copyIcalLink() {
+  try {
+    const { ical_token } = await api.getIcalToken()
+    const url = `${window.location.origin}/api/ical/feed?token=${ical_token}`
+    await navigator.clipboard.writeText(url)
+    ElMessage.success('iCal 订阅链接已复制到剪贴板')
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
 }
 
 watch(() => route.query.q, () => { store.pagination.page = 1; load() })

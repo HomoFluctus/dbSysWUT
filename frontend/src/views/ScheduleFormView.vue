@@ -1,6 +1,9 @@
 <template>
   <div class="form-page" v-loading="loading">
-    <h2>&#x1f4dd; {{ isEdit ? '编辑日程' : '新建日程' }}</h2>
+    <div class="form-head">
+      <h2>&#x1f4dd; {{ isEdit ? '编辑日程' : '新建日程' }}</h2>
+      <TemplatePicker v-if="!isEdit" ref="templatePickerRef" @apply="onTemplateApply" />
+    </div>
 
     <el-form :model="form" label-position="top" class="schedule-form">
       <el-form-item label="标题" required>
@@ -153,6 +156,7 @@ import { useTagStore } from '../stores/tags.js'
 import { api } from '../utils/api.js'
 import { ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
+import TemplatePicker from '../components/TemplatePicker.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -162,6 +166,11 @@ const tagStore = useTagStore()
 
 const isEdit = ref(!!route.params.id)
 const saving = ref(false)
+const templatePickerRef = ref(null)
+
+function onTemplateApply(data) {
+  Object.assign(form.value, data)
+}
 const loading = ref(false)
 
 const form = ref({
@@ -268,7 +277,8 @@ async function handleSubmit() {
 
 <style scoped>
 .form-page { max-width: 700px; }
-.form-page h2 { font-size: 24px; color: var(--text-primary); margin-bottom: 24px; }
+.form-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.form-head h2 { font-size: 24px; color: var(--text-primary); margin-bottom: 0; }
 .schedule-form .el-select { width: 100%; }
 .schedule-form .el-date-editor { width: 100%; }
 .reminder-presets { display: flex; gap: 8px; margin-bottom: 12px; }

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date as date_type, datetime, timedelta
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -140,6 +140,178 @@ async def get_activity_heatmap(db: AsyncSession, user_id: int) -> dict:
                 merged[key] = merged.get(key, 0) + 1
 
     return merged
+
+
+async def get_streaks(db: AsyncSession, user_id: int) -> dict:
+    """Calculate current and longest completion streaks."""
+    stmt = (
+        select(func.date(Schedule.completed_at).label("day"))
+        .where(
+            Schedule.user_id == user_id,
+            Schedule.completed_at.isnot(None),
+        )
+        .group_by(func.date(Schedule.completed_at))
+        .order_by(func.date(Schedule.completed_at).desc())
+    )
+    result = await db.execute(stmt)
+    completed_dates = [
+        date_type.fromisoformat(row.day) if isinstance(row.day, str) else row.day
+        for row in result
+    ]
+
+    if not completed_dates:
+        return {"current_streak": 0, "longest_streak": 0}
+
+    today = datetime.now(TZ).date()
+
+    # Current streak: count consecutive days ending at today (or yesterday)
+    current = 0
+    check = today
+    completed_set = set(completed_dates)
+    while check in completed_set:
+        current += 1
+        check -= timedelta(days=1)
+    # If today not done yet, check if yesterday starts the streak
+    if current == 0:
+        check = today - timedelta(days=1)
+        while check in completed_set:
+            current += 1
+            check -= timedelta(days=1)
+
+    # Longest streak: find max consecutive days
+    longest = 0
+    streak = 0
+    sorted_dates = sorted(completed_set)
+    for i, d in enumerate(sorted_dates):
+        if i == 0:
+            streak = 1
+        elif (d - sorted_dates[i - 1]).days == 1:
+            streak += 1
+        else:
+            streak = 1
+        longest = max(longest, streak)
+
+    return {"current_streak": current, "longest_streak": max(longest, current)}
+
+
+async def get_time_accuracy(db: AsyncSession, user_id: int) -> dict:
+    """Compare actual_minutes vs estimated_minutes for completed schedules."""
+    stmt = (
+        select(Schedule)
+        .where(
+            Schedule.user_id == user_id,
+            Schedule.status == ScheduleStatus.DONE,
+            Schedule.estimated_minutes.isnot(None),
+            Schedule.actual_minutes.isnot(None),
+        )
+        .order_by(Schedule.completed_at.desc())
+        .limit(50)
+    )
+    result = await db.execute(stmt)
+    schedules = result.scalars().all()
+
+    if not schedules:
+        return {"accuracy": 0, "total_estimated": 0, "total_actual": 0, "samples": 0}
+
+    total_estimated = sum(s.estimated_minutes or 0 for s in schedules)
+    total_actual = sum(s.actual_minutes or 0 for s in schedules)
+    accuracy = round(total_estimated / total_actual * 100, 1) if total_actual > 0 else 0
+
+    return {
+        "accuracy": min(accuracy, 200),
+        "total_estimated": total_estimated,
+        "total_actual": total_actual,
+        "samples": len(schedules),
+    }
+
+
+async def get_review(db: AsyncSession, user_id: int, period: str = "day") -> dict:
+    """Return completed / overdue / upcoming for daily or weekly review."""
+    now = datetime.now(TZ)
+    today = now.date()
+
+    if period == "week":
+        # This week: Monday to Sunday
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        next_start = week_end + timedelta(days=1)
+        next_end = next_start + timedelta(days=6)
+        range_start = week_start
+        range_end = week_end
+        upcoming_start = next_start
+        upcoming_end = next_end
+    else:
+        range_start = today
+        range_end = today
+        upcoming_start = today + timedelta(days=1)
+        upcoming_end = today + timedelta(days=1)
+
+    # Completed in range
+    stmt_done = (
+        select(Schedule)
+        .where(
+            Schedule.user_id == user_id,
+            func.date(Schedule.completed_at) >= range_start,
+            func.date(Schedule.completed_at) <= range_end,
+        )
+        .order_by(Schedule.completed_at.desc())
+        .limit(20)
+    )
+    result = await db.execute(stmt_done)
+    completed = [_schedule_brief(s) for s in result.scalars().all()]
+
+    # Overdue (not done, due date past)
+    stmt_overdue = (
+        select(Schedule)
+        .where(
+            Schedule.user_id == user_id,
+            Schedule.status != ScheduleStatus.DONE,
+            Schedule.status != ScheduleStatus.CANCELLED,
+            Schedule.due_date < now,
+        )
+        .order_by(Schedule.due_date)
+        .limit(20)
+    )
+    result = await db.execute(stmt_overdue)
+    overdue = [_schedule_brief(s) for s in result.scalars().all()]
+
+    # Upcoming
+    stmt_upcoming = (
+        select(Schedule)
+        .where(
+            Schedule.user_id == user_id,
+            Schedule.due_date.isnot(None),
+            func.date(Schedule.due_date) >= upcoming_start,
+            func.date(Schedule.due_date) <= upcoming_end,
+            Schedule.status != ScheduleStatus.DONE,
+            Schedule.status != ScheduleStatus.CANCELLED,
+        )
+        .order_by(Schedule.due_date)
+        .limit(20)
+    )
+    result = await db.execute(stmt_upcoming)
+    upcoming = [_schedule_brief(s) for s in result.scalars().all()]
+
+    return {
+        "period": period,
+        "completed": completed,
+        "completed_count": len(completed),
+        "overdue": overdue,
+        "overdue_count": len(overdue),
+        "upcoming": upcoming,
+        "upcoming_count": len(upcoming),
+    }
+
+
+def _schedule_brief(s: Schedule) -> dict:
+    return {
+        "schedule_id": s.schedule_id,
+        "title": s.title,
+        "priority": s.priority.value,
+        "status": s.status.value,
+        "due_date": s.due_date.isoformat() if s.due_date else None,
+        "completed_at": s.completed_at.isoformat() if s.completed_at else None,
+    }
 
 
 async def get_overdue_analysis(db: AsyncSession, user_id: int) -> list[dict]:

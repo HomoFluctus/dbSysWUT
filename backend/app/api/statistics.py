@@ -41,3 +41,22 @@ async def overdue(user: User = Depends(get_current_user), db: AsyncSession = Dep
 @router.get("/activity-heatmap")
 async def activity_heatmap(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     return await statistics_service.get_activity_heatmap(db, user.user_id)
+
+
+@router.get("/streaks")
+async def streaks(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await statistics_service.get_streaks(db, user.user_id)
+
+
+@router.get("/review")
+async def review(
+    period: str = Query("day", pattern="^(day|week)$"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await statistics_service.get_review(db, user.user_id, period)
+
+
+@router.get("/time-accuracy")
+async def time_accuracy(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await statistics_service.get_time_accuracy(db, user.user_id)

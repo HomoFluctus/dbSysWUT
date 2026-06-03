@@ -21,6 +21,7 @@ class ScheduleCreate(BaseModel):
     status: ScheduleStatus = ScheduleStatus.TODO
     due_date: Optional[datetime] = None
     estimated_minutes: Optional[int] = None
+    actual_minutes: Optional[int] = None
     category_id: Optional[int] = None
     tag_ids: list[int] = []
 
@@ -38,6 +39,7 @@ class ScheduleUpdate(BaseModel):
     due_date: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     estimated_minutes: Optional[int] = None
+    actual_minutes: Optional[int] = None
     category_id: Optional[int] = None
     tag_ids: Optional[list[int]] = None
 
@@ -62,6 +64,7 @@ class ScheduleOut(BaseModel):
     due_date: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     estimated_minutes: Optional[int] = None
+    actual_minutes: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     subtasks: list["SubtaskOut"] = []

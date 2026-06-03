@@ -2,6 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
+    path: '/share/:token',
+    name: 'SharedSchedule',
+    component: () => import('../views/SharedScheduleView.vue'),
+    meta: { guest: true },
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('../views/LoginView.vue'),
@@ -26,6 +32,8 @@ const routes = [
       { path: 'categories', name: 'Categories', component: () => import('../views/CategoriesView.vue') },
       { path: 'statistics', name: 'Statistics', component: () => import('../views/StatisticsView.vue') },
       { path: 'kanban', name: 'Kanban', component: () => import('../views/KanbanView.vue') },
+      { path: 'review', name: 'Review', component: () => import('../views/ReviewView.vue') },
+      { path: 'activity-log', name: 'ActivityLog', component: () => import('../views/ActivityLogView.vue') },
     ],
   },
 ]

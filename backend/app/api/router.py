@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 
-from app.api import (auth, calendar, categories, reminders, schedules, search,
-                     statistics, tags)
+from app.api import (activity_log, auth, calendar, categories, ical,
+                     reminders, schedules, search, sharing, statistics,
+                     tags, templates)
 
 api_router = APIRouter()
 
@@ -13,3 +14,7 @@ api_router.include_router(reminders.router, prefix="/reminders", tags=["reminder
 api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 api_router.include_router(statistics.router, prefix="/statistics", tags=["statistics"])
 api_router.include_router(search.router, prefix="/search", tags=["search"])
+api_router.include_router(activity_log.router, prefix="/activity-log", tags=["activity_log"])
+api_router.include_router(templates.router, prefix="/templates", tags=["templates"])
+api_router.include_router(ical.router, prefix="/ical", tags=["ical"])
+api_router.include_router(sharing.router, prefix="/schedules/share", tags=["sharing"])

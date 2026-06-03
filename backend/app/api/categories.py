@@ -48,3 +48,5 @@ async def delete_category(
         await category_service.delete_category(db, category_id, user.user_id)
     except NotFoundError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

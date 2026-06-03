@@ -38,6 +38,12 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+          <el-button plain size="small" @click="saveAsTemplate">
+            <el-icon><Collection /></el-icon>存为模板
+          </el-button>
+          <el-button plain size="small" @click="openShareDialog">
+            <el-icon><Share /></el-icon>分享
+          </el-button>
           <el-popconfirm title="确定删除这个日程？" confirm-button-text="删除" @confirm="handleDelete">
             <template #reference>
               <el-button type="danger" plain size="small">
@@ -54,6 +60,10 @@
         </el-descriptions-item>
         <el-descriptions-item label="预计耗时">
           {{ schedule.estimated_minutes ? schedule.estimated_minutes + ' 分钟' : '未设置' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="实际耗时">
+          <span v-if="schedule.actual_minutes">{{ schedule.actual_minutes }} 分钟</span>
+          <span v-else class="muted-text">未记录</span>
         </el-descriptions-item>
         <el-descriptions-item label="分类">
           <el-tag :color="schedule.category?.color" effect="dark" size="small" v-if="schedule.category">
@@ -147,6 +157,25 @@
         </div>
       </div>
 
+      <!-- Time tracking -->
+      <div class="section">
+        <h4>时间追踪</h4>
+        <div class="time-track-row">
+          <el-input-number v-model="logMinutes" :min="1" :max="480" size="small" style="width: 120px" placeholder="分钟" />
+          <el-button size="small" type="primary" @click="logTime('add')" :disabled="!logMinutes">追加耗时</el-button>
+          <el-button size="small" @click="logTime('set')" :disabled="!logMinutes">设为</el-button>
+        </div>
+        <div v-if="schedule.estimated_minutes && schedule.actual_minutes" class="time-bar-wrap">
+          <div class="time-bar">
+            <div class="time-bar-fill" :style="{ width: timeBarWidth + '%' }" :class="timeBarClass"></div>
+          </div>
+          <span class="time-bar-label">实际 {{ schedule.actual_minutes }} / 预估 {{ schedule.estimated_minutes }} 分钟</span>
+        </div>
+      </div>
+
+      <!-- Pomodoro Timer -->
+      <PomodoroTimer />
+
       <!-- Dependencies -->
       <div class="section">
         <div class="section-header">
@@ -187,11 +216,32 @@
         <el-button type="primary" @click="addDep" :loading="depLoading">添加</el-button>
       </template>
     </el-dialog>
+
+    <!-- Share dialog -->
+    <el-dialog v-model="showShareDialog" title="分享日程" width="440px">
+      <template v-if="shareToken">
+        <p style="margin-bottom: 10px; font-size: 14px; color: var(--text-secondary);">任何人通过以下链接即可查看此日程：</p>
+        <div class="share-link-row">
+          <el-input :model-value="shareUrl" readonly size="default" />
+          <el-button type="primary" size="default" @click="copyShareLink">{{ copyText }}</el-button>
+        </div>
+        <div style="margin-top: 16px;">
+          <el-button type="danger" plain size="small" @click="revokeShare">撤销分享</el-button>
+        </div>
+      </template>
+      <template v-else>
+        <p style="font-size: 14px; color: var(--text-secondary);">生成一个公开链接，任何人打开后即可查看此日程。</p>
+      </template>
+      <template #footer>
+        <el-button @click="showShareDialog = false">关闭</el-button>
+        <el-button v-if="!shareToken" type="primary" @click="generateShare" :loading="shareLoading">生成链接</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useScheduleStore } from '../stores/schedules.js'
 import { api } from '../utils/api.js'
@@ -199,7 +249,8 @@ import { ElMessage } from 'element-plus'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import TagBadge from '../components/TagBadge.vue'
-import { Edit, Delete, CopyDocument, Download, Plus, Link } from '@element-plus/icons-vue'
+import PomodoroTimer from '../components/PomodoroTimer.vue'
+import { Edit, Delete, CopyDocument, Download, Plus, Link, Collection, Share } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -215,6 +266,83 @@ const subtaskLoading = ref(false)
 const showDepDialog = ref(false)
 const depLoading = ref(false)
 const depForm = ref({ depends_on_id: null, dep_type: 'blocks' })
+
+const logMinutes = ref(null)
+
+const showShareDialog = ref(false)
+const shareToken = ref('')
+const shareLoading = ref(false)
+const copyText = ref('复制链接')
+
+const timeBarWidth = computed(() => {
+  if (!schedule.value?.estimated_minutes || !schedule.value?.actual_minutes) return 0
+  return Math.min((schedule.value.actual_minutes / schedule.value.estimated_minutes) * 100, 150)
+})
+
+const timeBarClass = computed(() => {
+  const w = timeBarWidth.value
+  if (w <= 80) return 'under'
+  if (w <= 120) return 'good'
+  return 'over'
+})
+
+async function logTime(mode) {
+  if (!logMinutes.value) return
+  try {
+    schedule.value = await api.logTime(route.params.id, { minutes: logMinutes.value, mode })
+    logMinutes.value = null
+    ElMessage.success('时间已记录')
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
+
+const shareUrl = computed(() => {
+  return shareToken.value ? `${window.location.origin}/share/${shareToken.value}` : ''
+})
+
+async function openShareDialog() {
+  showShareDialog.value = true
+  // If schedule already has a share_token cached, use it
+  if (schedule.value?.share_token) {
+    shareToken.value = schedule.value.share_token
+    return
+  }
+}
+
+async function generateShare() {
+  shareLoading.value = true
+  try {
+    const data = await api.generateShareLink(route.params.id)
+    shareToken.value = data.share_token
+    if (schedule.value) schedule.value.share_token = data.share_token
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    shareLoading.value = false
+  }
+}
+
+async function copyShareLink() {
+  try {
+    await navigator.clipboard.writeText(shareUrl.value)
+    copyText.value = '已复制'
+    setTimeout(() => { copyText.value = '复制链接' }, 2000)
+  } catch {
+    ElMessage.error('复制失败')
+  }
+}
+
+async function revokeShare() {
+  try {
+    await api.revokeShareLink(route.params.id)
+    shareToken.value = ''
+    if (schedule.value) schedule.value.share_token = null
+    ElMessage.success('分享链接已撤销')
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
 
 const statusOptions = [
   { label: '待办', value: 'todo' },
@@ -350,6 +478,22 @@ async function removeDep(depId) {
   }
 }
 
+async function saveAsTemplate() {
+  try {
+    await api.createTemplate({
+      title: schedule.value.title,
+      description: schedule.value.description,
+      priority: schedule.value.priority,
+      estimated_minutes: schedule.value.estimated_minutes,
+      category_id: schedule.value.category_id,
+      tag_ids: (schedule.value.tags || []).map(t => t.tag_id),
+    })
+    ElMessage.success('已保存为模板')
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
+
 async function exportCSV() {
   try { await api.exportCsv(); ElMessage.success('CSV 导出成功') }
   catch (e) { ElMessage.error(e.message) }
@@ -432,4 +576,15 @@ async function exportJSON() {
 .subtask-title { flex: 1; color: var(--text-secondary); }
 .subtask-summary { font-size: 12px; color: var(--text-muted); }
 .recurring-date-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.muted-text { color: var(--text-muted); font-size: 13px; }
+.time-track-row { display: flex; gap: 8px; align-items: center; }
+.time-bar-wrap { margin-top: 12px; }
+.time-bar { height: 8px; background: var(--el-fill-color); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+.time-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+.time-bar-fill.under { background: #22c55e; }
+.time-bar-fill.good { background: #eab308; }
+.time-bar-fill.over { background: #ef4444; }
+.time-bar-label { font-size: 11px; color: var(--text-muted); }
+.share-link-row { display: flex; gap: 8px; }
+.share-link-row .el-input { flex: 1; }
 </style>

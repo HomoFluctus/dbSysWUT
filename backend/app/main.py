@@ -29,6 +29,7 @@ async def startup():
     import app.models.schedule_dependency  # noqa
     import app.models.subtask  # noqa
     import app.models.activity_log  # noqa
+    import app.models.schedule_template  # noqa
     await init_db()
 
 

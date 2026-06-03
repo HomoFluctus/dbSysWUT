@@ -98,6 +98,43 @@ export const api = {
   // Activity heatmap
   getActivityHeatmap: () => request('/statistics/activity-heatmap'),
 
+  // Streaks & Review
+  getStreaks: () => request('/statistics/streaks'),
+  getReview: (period = 'day') => request(`/statistics/review?period=${period}`),
+
+  // Time tracking
+  logTime: (id, body) => request(`/schedules/${id}/log-time`, { method: 'PATCH', body: JSON.stringify(body) }),
+  getTimeAccuracy: () => request('/statistics/time-accuracy'),
+
+  // Activity log
+  listActivityLogs: (params = {}) => {
+    const q = new URLSearchParams(params).toString()
+    return request(`/activity-log${q ? '?' + q : ''}`)
+  },
+
+  // Templates
+  listTemplates: () => request('/templates'),
+  createTemplate: (body) => request('/templates', { method: 'POST', body: JSON.stringify(body) }),
+  deleteTemplate: (id) => request(`/templates/${id}`, { method: 'DELETE' }),
+  applyTemplate: (id) => request(`/templates/${id}/apply`, { method: 'POST' }),
+
+  // iCal
+  getIcalToken: () => request('/ical/token'),
+
+  // Sharing
+  generateShareLink: (id) => request(`/schedules/${id}/share`, { method: 'POST' }),
+  revokeShareLink: (id) => request(`/schedules/${id}/share`, { method: 'DELETE' }),
+  getSharedSchedule: (token) => {
+    // Public endpoint, no auth header
+    return fetch(`${BASE}/schedules/share/${token}`).then(async (res) => {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.detail || 'Schedule not found')
+      }
+      return res.json()
+    })
+  },
+
   // Export
   async exportCsv() {
     const token = localStorage.getItem('access_token')

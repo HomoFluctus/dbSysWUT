@@ -249,9 +249,40 @@ async def duplicate_schedule(
 
 
 # ---------------------------------------------------------------------------
-# Batch operations
+# Time tracking
 # ---------------------------------------------------------------------------
 from pydantic import BaseModel  # noqa: E402
+
+
+class LogTimeRequest(BaseModel):
+    minutes: int
+    mode: str = "add"  # "add" to accumulate, "set" to override
+
+
+@router.patch("/{schedule_id}/log-time", response_model=ScheduleDetailOut)
+async def log_time(
+    schedule_id: int,
+    data: LogTimeRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        s = await schedule_service.get_schedule(db, schedule_id, user.user_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+    if data.mode == "set":
+        s.actual_minutes = data.minutes
+    else:
+        s.actual_minutes = (s.actual_minutes or 0) + data.minutes
+    db.add(s)
+    await db.flush()
+    return await schedule_service.get_schedule(db, schedule_id, user.user_id)
+
+
+# ---------------------------------------------------------------------------
+# Batch operations
+# ---------------------------------------------------------------------------
 
 
 class BatchStatusUpdate(BaseModel):
@@ -293,6 +324,45 @@ async def batch_delete(
         except NotFoundError:
             pass
     return {"deleted": count}
+
+
+# ---------------------------------------------------------------------------
+# Sharing
+# ---------------------------------------------------------------------------
+import secrets  # noqa: E402
+
+
+@router.post("/{schedule_id}/share")
+async def generate_share_link(
+    schedule_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        s = await schedule_service.get_schedule(db, schedule_id, user.user_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+    if not s.share_token:
+        s.share_token = secrets.token_urlsafe(16)
+        db.add(s)
+        await db.flush()
+    return {"share_token": s.share_token, "url": f"/api/schedules/share/{s.share_token}"}
+
+
+@router.delete("/{schedule_id}/share", status_code=204)
+async def revoke_share_link(
+    schedule_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        s = await schedule_service.get_schedule(db, schedule_id, user.user_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    s.share_token = None
+    db.add(s)
+    await db.flush()
 
 
 # ---------------------------------------------------------------------------
